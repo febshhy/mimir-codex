@@ -1,0 +1,5 @@
+# Mimir project defaults. Codex loads project config only for trusted projects.
+# Sol "light" maps to the supported effort name "low".
+# Explicit user/CLI selections and managed policy may override these defaults.
+model = "gpt-6.2-sol"
+model_reasoning_effort = "low"

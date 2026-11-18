@@ -1,0 +1,13 @@
+# Volatile evidence, checkpoints, and test logs
+.work/
+# Environment and dependency artifacts
+.env
+.env.*
+!.env.example
+node_modules/
+__pycache__/
+.pytest_cache/
+.DS_Store
+# Marimo's editor snapshots and generated composite Python (local build only)
+__marimo__/
+.build/

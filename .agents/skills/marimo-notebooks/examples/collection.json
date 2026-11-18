@@ -1,0 +1,6 @@
+{
+  "schema": 1,
+  "sources": ["01_question.py", "02_analysis.py"],
+  "composed": ".build/combined.py",
+  "output": "generated/combined.ipynb"
+}

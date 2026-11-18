@@ -1,0 +1,66 @@
+{
+  "schema_version": 3,
+  "planned_nodes": [
+    {
+      "id": "N1", "domain": "application", "owner": "agent-app", "mode": "WRITE",
+      "task": "Implement the approved versioned payment-captured producer event and compatibility fixture (example only)",
+      "depends_on": [], "requires": [], "produces": ["producer_contract"],
+      "write_set": ["src/events/"], "verifies": [], "gate": "none",
+      "delegation": {
+        "A": {"nodes": [
+          {"id": "spec", "domain": "application", "inputs": [], "outputs": ["event_spec"]},
+          {"id": "emit", "domain": "application", "inputs": ["event_spec"], "outputs": ["event_code"]}
+        ], "edges": [{"from": "spec", "to": "emit", "data": "event_spec"}]},
+        "E": [{"at": "spec", "kind": "wrong_context", "mitigation": "Stop if approved transaction and event semantics are unknown"},
+              {"at": "emit", "kind": "misinterpretation", "mitigation": "Check producer atomicity and version-compatibility fixture"}],
+        "R": {"method": "software-design-thinking foundations; requirements; testing; advanced application design if consequential producer state/effects", "verification": [["sh", "-c", "test -d src/events"]],
+              "why": "Publish a source event with stable business meaning", "inputs": ["approved payment state/event contract"]}
+      }
+    },
+    {
+      "id": "N2", "domain": "data_engineering", "owner": "agent-de", "mode": "WRITE",
+      "task": "Implement repeat-safe capture and replay through source event schema (example only)",
+      "depends_on": ["N1"], "requires": [{"from": "N1", "output": "producer_contract"}], "produces": ["landing_contract"],
+      "write_set": ["pipelines/"], "verifies": [], "gate": "none",
+      "delegation": {
+        "A": {"nodes": [
+          {"id": "capture", "domain": "data_engineering", "inputs": ["producer_contract"], "outputs": ["raw_rows"]},
+          {"id": "checkpoint", "domain": "data_engineering", "inputs": ["raw_rows"], "outputs": ["landing_rows"]}
+        ], "edges": [{"from": "capture", "to": "checkpoint", "data": "raw_rows"}]},
+        "E": [{"at": "capture", "kind": "missing_input", "mitigation": "Reject missing producer schema or unknown delivery guarantees"},
+              {"at": "checkpoint", "kind": "misinterpretation", "mitigation": "Check duplicate, partial commit, replay and late event fixtures"}],
+        "R": {"method": "data-lifecycle; data-operations; software-design-thinking for effects", "verification": [["sh", "-c", "test -d pipelines"]],
+              "why": "Deliver durable replayable rows without changing event meaning", "inputs": ["N1.producer_contract"]}
+      }
+    },
+    {
+      "id": "N3", "domain": "analytics", "owner": "agent-analytics", "mode": "WRITE",
+      "task": "Implement declared-grain payment fact and daily metric with known-answer fixture (example only)",
+      "depends_on": ["N2"], "requires": [{"from": "N2", "output": "landing_contract"}], "produces": ["metric_contract"],
+      "write_set": ["models/"], "verifies": [], "gate": "none",
+      "delegation": {
+        "A": {"nodes": [
+          {"id": "grain", "domain": "analytics", "inputs": ["landing_contract"], "outputs": ["fact_spec"]},
+          {"id": "metric", "domain": "analytics", "inputs": ["fact_spec"], "outputs": ["metric_def"]}
+        ], "edges": [{"from": "grain", "to": "metric", "data": "fact_spec"}]},
+        "E": [{"at": "grain", "kind": "wrong_context", "mitigation": "Stop if currency, business day or captured-vs-net revenue is unapproved"},
+              {"at": "metric", "kind": "misinterpretation", "mitigation": "Verify grain uniqueness, no fanout, and source reconciled amount"}],
+        "R": {"method": "data-dimensional-modeling; data-statistics as applicable; testing", "verification": [["sh", "-c", "test -d models"]],
+              "why": "Expose the approved trustworthy daily captured revenue measure", "inputs": ["N2.landing_contract"]}
+      }
+    },
+    {
+      "id": "N4", "domain": "quality", "owner": "agent-reviewer", "mode": "RUN",
+      "task": "Independently inspect producer, ingestion and metric changes and their executed checks (example only)",
+      "depends_on": ["N1", "N2", "N3"],
+      "requires": [{"from": "N1", "output": "producer_contract"}, {"from": "N2", "output": "landing_contract"}, {"from": "N3", "output": "metric_contract"}],
+      "produces": ["review_findings"], "write_set": [], "verifies": ["N1", "N2", "N3"], "gate": "review",
+      "delegation": {
+        "A": {"nodes": [{"id": "review", "domain": "quality", "inputs": ["producer_contract", "landing_contract", "metric_contract"], "outputs": ["review_findings"]}], "edges": []},
+        "E": [{"at": "review", "kind": "missing_input", "mitigation": "Block if the three artifacts or real test results are unavailable"}],
+        "R": {"method": "testing; data-operations; graph-protocol 5-10", "verification": [["sh", "-c", "test -d src/events && test -d pipelines && test -d models"]],
+              "why": "Provide an independent cross-boundary acceptance review", "inputs": ["N1.producer_contract", "N2.landing_contract", "N3.metric_contract"]}
+      }
+    }
+  ]
+}

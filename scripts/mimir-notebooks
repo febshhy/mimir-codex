@@ -1,0 +1,380 @@
+#!/usr/bin/env python3
+"""Marimo-only notebook creation, composition and Jupyter export.
+
+No code in this script writes Jupyter JSON. Only `marimo export ipynb`
+may create .ipynb artifacts. Python 3.9+; marimo is a separate dependency.
+"""
+from __future__ import annotations
+
+import argparse
+import ast
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+from typing import Any
+
+
+class NotebookError(Exception):
+    pass
+
+
+def abort(message: str) -> None:
+    raise NotebookError(message)
+
+
+def safe_relative(base: Path, value: str, suffix: str) -> Path:
+    if not isinstance(value, str) or not value or Path(value).is_absolute():
+        abort(f"Expected a relative {suffix} path: {value!r}")
+    raw = Path(value)
+    if ".." in raw.parts or "." in raw.parts or raw.suffix.lower() != suffix:
+        abort(f"Unsafe or incorrect {suffix} path: {value!r}")
+    untrusted = base / raw
+    if any(p.is_symlink() for p in [untrusted, *untrusted.parents] if p != base and p.is_relative_to(base)):
+        abort(f"Symlink in {suffix} path is not allowed: {value!r}")
+    full = untrusted.resolve()
+    if not full.is_relative_to(base.resolve()):
+        abort(f"Path leaves manifest directory: {value!r}")
+    return full
+
+
+def is_app_cell(dec: ast.expr) -> bool:
+    func = dec.func if isinstance(dec, ast.Call) else dec
+    return (
+        isinstance(func, ast.Attribute)
+        and func.attr == "cell"
+        and isinstance(func.value, ast.Name)
+        and func.value.id == "app"
+    )
+
+
+def returned_names(node: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
+    """A preflight for conventional marimo's explicit cell returns.
+
+    marimo check is authoritative about dependency validity; this is a
+    conservative cross-module early error for common generated notebooks.
+    """
+    found: set[str] = set()
+    for stmt in node.body:
+        if isinstance(stmt, ast.Return):
+            values = stmt.value.elts if isinstance(stmt.value, (ast.Tuple, ast.List)) else [stmt.value]
+            for expr in values:
+                if isinstance(expr, ast.Name) and not expr.id.startswith("_"):
+                    found.add(expr.id)
+    return found
+
+
+def is_safe_shared_marimo_cell(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """The only auto-deduplicated cell: `import marimo as mo; return (mo,)`."""
+    if len(node.body) != 2:
+        return False
+    imp, ret = node.body
+    if not isinstance(imp, ast.Import) or len(imp.names) != 1:
+        return False
+    alias = imp.names[0]
+    if alias.name != "marimo" or alias.asname != "mo":
+        return False
+    if not isinstance(ret, ast.Return):
+        return False
+    value = ret.value
+    return (isinstance(value, ast.Tuple) and len(value.elts) == 1
+            and isinstance(value.elts[0], ast.Name) and value.elts[0].id == "mo")
+
+
+def parse_marimo_source(path: Path) -> list[tuple[str, set[str], bool, str]]:
+    if path.suffix != ".py" or not path.is_file() or path.is_symlink():
+        abort(f"Marimo source must be a regular .py file: {path}")
+    raw = path.read_text(encoding="utf-8")
+    try:
+        tree = ast.parse(raw, filename=str(path))
+    except SyntaxError as exc:
+        abort(f"Invalid Python in {path}: {exc}")
+    lines = raw.splitlines(keepends=True)
+    app_seen = False
+    marimo_seen = False
+    cells: list[tuple[str, set[str], bool, str]] = []
+    for stmt in tree.body:
+        if isinstance(stmt, ast.Import) and len(stmt.names) == 1 and stmt.names[0].name == "marimo" and stmt.names[0].asname is None:
+            marimo_seen = True
+            continue
+        if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Name):
+            target = stmt.targets[0].id
+            if target == "__generated_with" and isinstance(stmt.value, ast.Constant):
+                continue
+            call = stmt.value
+            if (target == "app" and isinstance(call, ast.Call)
+                and isinstance(call.func, ast.Attribute) and call.func.attr == "App"
+                and isinstance(call.func.value, ast.Name) and call.func.value.id == "marimo"):
+                app_seen = True
+                continue
+        if (isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)) and len(stmt.decorator_list) == 1
+            and is_app_cell(stmt.decorator_list[0])):
+            begin = min(d.lineno for d in stmt.decorator_list) - 1
+            code = "".join(lines[begin:stmt.end_lineno]).rstrip() + "\n"
+            cells.append((code, returned_names(stmt), is_safe_shared_marimo_cell(stmt), stmt.name))
+            continue
+        if isinstance(stmt, ast.If) and isinstance(stmt.test, ast.Compare):
+            # Only allow the standard `if __name__ == '__main__': app.run()` footer.
+            try:
+                if (len(stmt.body) == 1 and isinstance(stmt.body[0], ast.Expr)
+                    and isinstance(stmt.body[0].value, ast.Call)
+                    and isinstance(stmt.body[0].value.func, ast.Attribute)
+                    and isinstance(stmt.body[0].value.func.value, ast.Name)
+                    and stmt.body[0].value.func.value.id == "app"
+                    and stmt.body[0].value.func.attr == "run"
+                    and isinstance(stmt.test.left, ast.Name) and stmt.test.left.id == "__name__"
+                    and len(stmt.test.ops) == 1 and isinstance(stmt.test.ops[0], ast.Eq)
+                    and len(stmt.test.comparators) == 1
+                    and isinstance(stmt.test.comparators[0], ast.Constant)
+                    and stmt.test.comparators[0].value == "__main__"):
+                    continue
+            except (TypeError, ValueError):
+                pass
+        if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant) and isinstance(stmt.value.value, str):
+            continue
+        abort(f"Unsupported top-level statement at {path}:{stmt.lineno}. "
+              "Move application logic into @app.cell; composition must not silently drop code.")
+    if not (marimo_seen and app_seen and cells):
+        abort(f"Expected a standard `import marimo`, `app = marimo.App(...)`, and @app.cell functions: {path}")
+    return cells
+
+
+def combine(sources: list[Path], base: Path) -> str:
+    if not sources:
+        abort("At least one Marimo Python source is required")
+    if len(set(sources)) != len(sources):
+        abort("A Marimo source appears more than once")
+    output = [
+        "# GENERATED FROM MARIMO PYTHON SOURCES. DO NOT EDIT.\n",
+        "# Edit the listed original marimo .py files; regenerate via scripts/mimir-notebooks.\n",
+        "import marimo\n\n",
+        "app = marimo.App()\n\n",
+    ]
+    name_owner: dict[str, str] = {}
+    function_owner: dict[str, str] = {}
+    already_shared_mo = False
+    for source in sources:
+        parts = parse_marimo_source(source)
+        display = source.relative_to(base) if source.is_relative_to(base) else source
+        output.append(f"# --- SOURCE: {display} ---\n\n")
+        for code, defined, shared_mo, function_name in parts:
+            if shared_mo and already_shared_mo:
+                output.append("# Identical standard `import marimo as mo` cell deduplicated.\n\n")
+                continue
+            if shared_mo:
+                already_shared_mo = True
+            if function_name != "_":
+                if function_name in function_owner:
+                    abort(f"Named cell '{function_name}' is defined in both {function_owner[function_name]} and {display}; rename one")
+                function_owner[function_name] = str(display)
+            for name in defined:
+                if name in name_owner:
+                    abort(f"Global '{name}' defined in both {name_owner[name]} and {display}. "
+                          "Rename or share deliberately; never silently overwrite notebook state.")
+                name_owner[name] = str(display)
+            output.append(code + "\n")
+    output.append('if __name__ == "__main__":\n    app.run()\n')
+    combined = "".join(output)
+    compile(combined, "combined_marimo.py", "exec")
+    return combined
+
+
+def manifest_data(manifest: Path) -> tuple[list[Path], Path, Path, Path]:
+    if not manifest.is_file() or manifest.is_symlink():
+        abort(f"Missing regular manifest: {manifest}")
+    try:
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+    except (ValueError, OSError) as exc:
+        abort(f"Invalid JSON manifest {manifest}: {exc}")
+    if not isinstance(data, dict) or data.get("schema") != 1 or set(data) != {"schema", "sources", "composed", "output"}:
+        abort("Manifest requires exactly schema=1, sources, composed, output")
+    base = manifest.parent.resolve()
+    if not isinstance(data["sources"], list) or not data["sources"] or not all(isinstance(s, str) for s in data["sources"]):
+        abort("Manifest sources must be a nonempty ordered array of .py filenames")
+    sources = [safe_relative(base, s, ".py") for s in data["sources"]]
+    composed = safe_relative(base, data["composed"], ".py")
+    output = safe_relative(base, data["output"], ".ipynb")
+    if composed in sources or composed == output:
+        abort("Composed file and output must not overwrite original sources")
+    if any(p.parent == output.parent for p in sources):
+        abort("Original Marimo source and generated notebook cannot share a directory")
+    return sources, composed, output, base
+
+
+def marimo_executable() -> str:
+    exe = shutil.which("marimo")
+    if not exe:
+        abort("Marimo is not installed. Install it in the project environment (with nbformat for .ipynb export). "
+              "No .ipynb was created.")
+    return exe
+
+
+def command(executable: str, *args: str) -> None:
+    proc = subprocess.run([executable, *args], check=False)
+    if proc.returncode:
+        abort(f"Marimo exited {proc.returncode}: marimo {' '.join(args)}")
+
+
+def export(executable: str, source: Path, destination: Path) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    # Only Marimo creates the .ipynb. Even the temporary export path must
+    # not be pre-created by our Python tooling.
+    with tempfile.TemporaryDirectory(prefix=".mimir-export-", dir=destination.parent) as temp:
+        tmp = Path(temp) / "export.ipynb"
+        command(executable, "export", "ipynb", str(source), "-o", str(tmp))
+        if not tmp.is_file() or tmp.stat().st_size == 0:
+            abort("Marimo returned success but did not produce the export")
+        # Validate structure, not semantics. Full execution is project-specific.
+        try:
+            payload = json.loads(tmp.read_text(encoding="utf-8"))
+        except (ValueError, UnicodeDecodeError) as exc:
+            abort(f"Marimo export is invalid JSON: {exc}")
+        if not isinstance(payload, dict) or payload.get("nbformat") != 4 or not isinstance(payload.get("cells"), list):
+            abort("Marimo export is not a valid Jupyter v4 notebook shape")
+        os.replace(tmp, destination)
+
+
+def write_composed(content: str, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        previous = path.read_text(encoding="utf-8")
+        if previous == content:
+            return
+        if not previous.startswith("# GENERATED FROM MARIMO PYTHON SOURCES. DO NOT EDIT."):
+            abort(f"Refusing to overwrite a non-generated Marimo file: {path}")
+    fd, temp = tempfile.mkstemp(suffix=".py", prefix=".mimir-compose-", dir=path.parent)
+    os.close(fd)
+    tmp = Path(temp)
+    try:
+        tmp.write_text(content, encoding="utf-8")
+        os.replace(tmp, path)
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
+def notebook_matches(expected: Path, actual: Path) -> bool:
+    if not actual.is_file():
+        return False
+    try:
+        return json.loads(expected.read_text(encoding="utf-8")) == json.loads(actual.read_text(encoding="utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        return False
+
+
+def run_bundle(manifest: Path, verify: bool) -> None:
+    sources, composed, output, base = manifest_data(manifest)
+    content = combine(sources, base)
+    if verify and (not composed.exists() or composed.read_text(encoding="utf-8") != content):
+        abort(f"Generated Marimo composition is stale or missing: {composed}")
+    exe = marimo_executable()
+    if verify:
+        # Use the same composed source path as bundle so local imports and
+        # source-relative behavior are evaluated under matching conditions.
+        with tempfile.TemporaryDirectory(prefix="mimir-verify-") as temp:
+            tmp_out = Path(temp) / "combined.ipynb"
+            command(exe, "check", str(composed))
+            export(exe, composed, tmp_out)
+            if not notebook_matches(tmp_out, output):
+                abort(f"Generated .ipynb differs from Marimo source. Do not edit it directly: {output}")
+        print(f"PASS: generated notebook matches Marimo sources: {output}")
+    else:
+        write_composed(content, composed)
+        command(exe, "check", str(composed))
+        export(exe, composed, output)
+        print(f"Generated {output} using Marimo from {len(sources)} sources")
+
+
+def run_audit(root: Path) -> None:
+    """Fail closed if notebook deliverables have no source manifest or have drifted.
+
+    The command is intended for a project's notebook directory, not an entire
+    virtual environment. Only Marimo's CLI writes any Jupyter file during checks.
+    """
+    if not root.is_dir() or root.is_symlink():
+        abort(f"Notebook audit root must be a directory, not a symlink: {root}")
+    root = root.resolve()
+    excluded = {".git", ".venv", "venv", "node_modules", "__marimo__", ".work", ".build"}
+
+    def included(path: Path) -> bool:
+        return not any(part in excluded for part in path.relative_to(root).parts)
+
+    manifests = sorted(p for p in root.rglob("collection.json")
+                       if included(p) and p.is_file())
+    declared: dict[Path, Path] = {}
+    for manifest in manifests:
+        sources, composed, output, base = manifest_data(manifest)
+        if not output.is_relative_to(root):
+            abort(f"Notebook manifest output is outside audit root: {manifest}")
+        if output in declared:
+            abort(f"Multiple manifests declare {output}: {declared[output]}, {manifest}")
+        declared[output] = manifest
+
+    delivered = set()
+    for notebook in sorted(root.rglob("*.ipynb")):
+        if not included(notebook):
+            continue
+        if notebook.is_symlink():
+            abort(f"Notebook artifact must not be a symlink: {notebook}")
+        delivered.add(notebook.resolve())
+    orphaned = delivered - set(declared)
+    if orphaned:
+        abort("Unmanaged .ipynb found; create a Marimo source + manifest, "
+              "or remove the unverified artifact: " + ", ".join(map(str, sorted(orphaned))))
+    missing = set(declared) - delivered
+    if missing:
+        abort("Manifest declares missing .ipynb; run bundle from Marimo sources: "
+              + ", ".join(map(str, sorted(missing))))
+    for output, manifest in declared.items():
+        run_bundle(manifest, verify=True)
+    print(f"PASS: audited {len(delivered)} Marimo-generated .ipynb artifacts across {len(manifests)} manifests")
+
+
+def run_single(source: Path, output: Path, verify: bool) -> None:
+    if source.suffix != ".py" or output.suffix != ".ipynb" or source.resolve() == output.resolve():
+        abort("Source must be a Marimo .py file, and output must be a distinct generated .ipynb")
+    parse_marimo_source(source.resolve())
+    exe = marimo_executable()
+    command(exe, "check", str(source.resolve()))
+    if verify:
+        with tempfile.TemporaryDirectory(prefix="mimir-verify-") as tmp:
+            fresh = Path(tmp) / "export.ipynb"
+            export(exe, source.resolve(), fresh)
+            if not notebook_matches(fresh, output.resolve()):
+                abort(f"Stale or manually changed generated notebook: {output}")
+        print(f"PASS: {output}")
+    else:
+        export(exe, source.resolve(), output.resolve())
+        print(f"Generated {output} using Marimo")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    subs = parser.add_subparsers(dest="operation", required=True)
+    for name in ("bundle", "verify"):
+        p = subs.add_parser(name, help="Combine Marimo sources and export, or verify generated artifacts")
+        p.add_argument("--manifest", type=Path, required=True, help="Manifest JSON, paths relative to manifest directory")
+    audit = subs.add_parser("audit", help="Require manifest provenance and fresh Marimo exports for all notebooks under a root")
+    audit.add_argument("--root", type=Path, required=True, help="Notebook directory to audit (such as notebooks/)")
+    single = subs.add_parser("export", help="Export one Marimo .py to generated .ipynb")
+    single.add_argument("--source", type=Path, required=True)
+    single.add_argument("--output", type=Path, required=True)
+    single.add_argument("--verify", action="store_true", help="Compare existing .ipynb against fresh Marimo export without updating")
+    args = parser.parse_args()
+    try:
+        if args.operation in ("bundle", "verify"):
+            run_bundle(args.manifest.resolve(), args.operation == "verify")
+        elif args.operation == "audit":
+            run_audit(args.root)
+        else:
+            run_single(args.source, args.output, args.verify)
+    except (NotebookError, OSError) as exc:
+        print(f"Mimir notebooks: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
