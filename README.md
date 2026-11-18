@@ -10,13 +10,13 @@ Mimir gives Codex a disciplined way to work across application code, data pipeli
 
 ## Why Mimir?
 
-A request that sounds small can change results in several places. A change to how checkout records a payment, for example, can affect ingestion, the revenue query, and the dashboard. A retried payment event can inflate daily revenue if the pipeline counts it twice.
+Ask Codex to change one chart in a Jupyter notebook and it can spend context reading cell metadata and saved outputs, then rewrite parts of the `.ipynb` JSON for a change that takes a few lines of Python. Bigger mistakes are easier to miss. A SQL query can run successfully while a join counts the same order twice. A churn model can score well in a holdout because it used a field that was filled in after the customer left.
 
-Mimir gives Codex three connected disciplines.
+Mimir gives Codex three ways to avoid that rework and catch those mistakes.
 
-1. **Trace before editing.** Follow the actual path from the payment event to the dashboard. Check what one row represents, which timestamp counts, and how retries are handled.
-2. **Change only what the task needs.** Agree on the data contracts the change touches and keep the work to one path from source to consumer.
-3. **Verify what changed.** Reconcile the dashboard total for a known day against the source records. Replay a duplicate event and check that the total stays the same.
+1. **Edit the source and generate the notebook.** Author and review Marimo `.py` files. Export Jupyter `.ipynb` through Marimo and use the manifest audit to catch stale or unregistered exports.
+2. **Trace the records before changing the result.** Check what one row represents, which timestamp applies, and how many matches each join can return. Test a few orders with known totals and replay a duplicate event to verify that it counts once.
+3. **Check the evidence behind the decision.** Evaluate a churn model using fields available at prediction time and compare it with a baseline. Show the metric’s denominator and data freshness so dashboard readers know what the result covers.
 
 <picture>
   <source media="(max-width: 640px)" srcset="marketing/mimir-source-to-decision-mobile.svg">
@@ -25,7 +25,7 @@ Mimir gives Codex three connected disciplines.
 
 **Source records** → **Data pipeline** → **Verified result** → **Decision**
 
-The result is a change you can review from the payment event to the number people use. [See how the method handles captured revenue](marketing/HOW_IT_WORKS.md#example-captured-revenue-from-source-to-dashboard).
+See how these checks work on a real task, from editing a notebook to tracing a dashboard number back to source records. [Try a task](marketing/USAGE.md#task-examples) · [Follow the captured-revenue example](marketing/HOW_IT_WORKS.md#example-captured-revenue-from-source-to-dashboard)
 
 The engineering playbook explains how to define contracts, trace dependencies, and choose checks that fit your project. [Learn the engineering behind it](marketing/ENGINEERING_PLAYBOOK.md)
 
