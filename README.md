@@ -10,11 +10,13 @@ Mimir gives Codex a disciplined way to work across application code, data pipeli
 
 ## Why Mimir?
 
-A request that sounds small can change results in several places. A change to how checkout records a payment, for example, can affect ingestion, the revenue query, and the dashboard. Follow the change from the payment event to the number people use.
+A request that sounds small can change results in several places. A change to how checkout records a payment, for example, can affect ingestion, the revenue query, and the dashboard. A retried payment event can inflate daily revenue if the pipeline counts it twice.
 
-1. **Trace before editing.** Find the source records, the code that produces them, and the people who use the result. Check what one row represents and which timestamp governs the result.
-2. **Change only what the task needs.** Choose one source-to-consumer change and agree on the contracts it crosses.
-3. **Verify what changed.** Check the result against known records and exercise the failure paths that matter.
+Mimir gives Codex three connected disciplines.
+
+1. **Trace before editing.** Follow the actual path from the payment event to the dashboard. Check what one row represents, which timestamp counts, and how retries are handled.
+2. **Change only what the task needs.** Agree on the data contracts the change touches and keep the work to one path from source to consumer.
+3. **Verify what changed.** Reconcile the dashboard total for a known day against the source records. Replay a duplicate event and check that the total stays the same.
 
 <picture>
   <source media="(max-width: 640px)" srcset="marketing/mimir-source-to-decision-mobile.svg">
@@ -23,7 +25,9 @@ A request that sounds small can change results in several places. A change to ho
 
 **Source records** → **Data pipeline** → **Verified result** → **Decision**
 
-[See how the method handles captured revenue](marketing/HOW_IT_WORKS.md#example-captured-revenue-from-source-to-dashboard) · [Learn the engineering behind it](marketing/ENGINEERING_PLAYBOOK.md)
+The result is a change you can review from the payment event to the number people use. [See how the method handles captured revenue](marketing/HOW_IT_WORKS.md#example-captured-revenue-from-source-to-dashboard).
+
+The engineering playbook explains how to define contracts, trace dependencies, and choose checks that fit your project. [Learn the engineering behind it](marketing/ENGINEERING_PLAYBOOK.md)
 
 ## Start in an existing project
 
