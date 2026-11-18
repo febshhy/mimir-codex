@@ -6,7 +6,7 @@
 
 ## First session
 
-Run `codex` from the target project root and start with this prompt.
+Start a Codex session in the installed project using the app, IDE extension, or CLI. Use this prompt for your first task.
 
 > Read `.mimir/AGENTS.md` and the relevant skill instructions under `.agents/skills/`. Inspect the repository first. State relevant unknowns and do not edit files until the scope and acceptance checks are clear.
 

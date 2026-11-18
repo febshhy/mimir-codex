@@ -2,7 +2,7 @@
 
 **Trace the change. Preserve the contract. Verify the result.**
 
-Mimir gives Codex CLI a disciplined way to work across application code, data pipelines, analysis, and ML. It helps you trace the affected paths, make a focused change, and inspect the evidence behind the result. Use it with your existing project, data stack, and tests.
+Mimir gives Codex a disciplined way to work across application code, data pipelines, analysis, and ML. Use the same project guidance and skills in the Codex app, IDE extension, or CLI. Trace the affected paths, make a focused change, and inspect the evidence behind the result.
 
 ![An ancient stone well beneath the roots of Yggdrasil, surrounded by mist and moss.](marketing/mimir-well.webp)
 
@@ -27,7 +27,7 @@ A request that sounds small can change results in several places. A change to ho
 
 ## Start in an existing project
 
-Run these commands in **Linux Bash** or **WSL on Windows**. You need Bash 4.4+, Python 3.9+, Git, `jq`, and Codex CLI. [Check the setup prerequisites](marketing/SETUP.md#prerequisites).
+Run the installer in **Linux Bash** or **WSL on Windows**. You need Bash 4.4+, Python 3.9+, Git, and `jq`. [Check the setup prerequisites](marketing/SETUP.md#prerequisites).
 
 **1. Get Mimir outside your application repository.**
 
@@ -48,10 +48,11 @@ bash "$HOME/tools/mimir-codex/scripts/mimir" start --project . --integrate-agent
 ```bash
 bash "$HOME/tools/mimir-codex/scripts/mimir" start --project . --integrate-agents --apply
 bash .mimir/install.sh --verify
-codex
 ```
 
 Apply checks that the saved plan still matches the project. The installer preserves unrelated instructions and leaves your project's `docs/` directory alone.
+
+Open the installed project in the Codex app or your IDE, or run `codex` from the project root. [Start Codex in your project](marketing/SETUP.md#start-codex).
 
 For a [new project](marketing/SETUP.md#new-project), [global installation](marketing/SETUP.md#global-installation), or recovery, use the [setup guide](marketing/SETUP.md).
 

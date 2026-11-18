@@ -8,7 +8,7 @@
 
 Run the installer in Bash on Linux or Windows Subsystem for Linux (WSL).
 
-The installer and lifecycle tools need Bash 4.4+, Python 3.9+, Git, `jq`, and standard Linux tools such as `flock`, `sha256sum`, `timeout`, `find`, `sort`, and core utilities. Install and authenticate [Codex CLI](https://github.com/openai/codex) separately.
+The installer and lifecycle tools need Bash 4.4+, Python 3.9+, Git, `jq`, and standard Linux tools such as `flock`, `sha256sum`, `timeout`, `find`, `sort`, and core utilities. Sign in to Codex in the app, IDE extension, or CLI you plan to use.
 
 Check the main tools:
 
@@ -17,7 +17,6 @@ bash --version
 python3 --version
 git --version
 jq --version
-codex --version
 ```
 
 For Ubuntu or Debian, install the common system dependencies if missing:
@@ -107,12 +106,11 @@ Review the preview before applying. The global installer uses the default Codex 
 
 ## Start Codex
 
-After project installation, open the target repository and run:
+After installation, start a new Codex session in the target project.
 
-```bash
-cd /path/to/your-project
-codex
-```
+- **Codex app:** Open the installed project folder and start a chat. [Desktop app guide](https://learn.chatgpt.com/docs/app)
+- **IDE extension:** Open the installed project as your workspace and start a chat in the Codex panel. [IDE extension guide](https://learn.chatgpt.com/docs/codex/ide)
+- **CLI:** Run `codex` from the project root. [Codex CLI](https://github.com/openai/codex)
 
 For an existing codebase, Codex can use `$project-adoption`, `$software-design-thinking` and `$data-slicing` to inspect real application/data sources and trace relevant execution and lineage paths. [Start with a read-only task](USAGE.md#first-session).
 
@@ -124,7 +122,7 @@ The project installer adds a **short reference** to the active root `AGENTS.md` 
 
 Project `.codex/config.toml` sets the main model to `gpt-6.2-sol` with `low` effort. The project reviewer configuration selects `gpt-6-luna` with `high` effort. Resolve any conflict with an existing unmanaged `.codex/config.toml` before rerunning installation.
 
-Restart Codex from the project root after setup. For notebook projects, run `python scripts/mimir-notebooks audit --root notebooks` in CI and register every generated `.ipynb` in a manifest.
+For notebook projects, run `python scripts/mimir-notebooks audit --root notebooks` in CI and register every generated `.ipynb` in a manifest.
 
 ## Verify, recover, or remove
 
