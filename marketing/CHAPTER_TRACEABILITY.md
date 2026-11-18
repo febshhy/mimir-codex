@@ -2,7 +2,7 @@
 
 See the [Advanced SQL chapter mapping](../.agents/skills/advanced-sql/references/MACHADO_RUSSA_ESMERIZ_CHAPTER_MAP.md) for SQL methods.
 
-Each table pairs chapter topics with Mimir engineering applications. The [book concept index](BOOK_CONCEPTS.md) links methods and sources.
+Use these tables to see how a chapter topic informs a design choice or a verification check. The [book concept index](BOOK_CONCEPTS.md) links the methods and sources.
 
 ## Ralph Kimball and Margy Ross — *The Data Warehouse Toolkit*, third edition (2013)
 
@@ -109,7 +109,7 @@ Published [chapter list](https://www.wiley.com/en-us/the-data-warehouse-toolkit-
 | 9. Case studies | Run before/after comparison and a cold-reader interpretation test. |
 | 10. Final thoughts | Institutionalize review and reuse of clear charts and well-defined metrics. |
 
-## Cross-checks spanning the books
+## Check the result across boundaries
 
 The chapter titles are **source-grounded**. The tests below are **Mimir prescriptions**, not claims of author endorsement.
 

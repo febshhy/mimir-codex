@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 452" role="img" aria-labelledby="title desc">
+  <title id="title">From the well to the valley</title>
+  <desc id="desc">A stone-lined channel carries water from a well to cultivated fields. The four stages are Source records, Data pipeline, Verified result, and Decision.</desc>
+  <g transform="scale(.3333333333)">
+  <defs>
+    <linearGradient id="sky" x2="0" y2="100%" gradientUnits="objectBoundingBox">
+      <stop stop-color="#304650"/>
+      <stop offset="1" stop-color="#d8d4c3"/>
+    </linearGradient>
+    <linearGradient id="rock" x1="0" y1="0" x2="0" y2="100%">
+      <stop stop-color="#8d9690"/>
+      <stop offset="1" stop-color="#283d42"/>
+    </linearGradient>
+    <linearGradient id="stone" x1="0" y1="0" x2="0" y2="100%">
+      <stop stop-color="#c0b7a5"/>
+      <stop offset="1" stop-color="#5d6868"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="100%">
+      <stop stop-color="#baccc3"/>
+      <stop offset="1" stop-color="#4f777b"/>
+    </linearGradient>
+    <pattern id="joints" width="54" height="20" patternUnits="userSpaceOnUse">
+      <path d="M0 0H54M16 0v20" fill="none" stroke="#243940" stroke-opacity=".25"/>
+    </pattern>
+    <linearGradient id="strip" x2="0" y2="100%">
+      <stop stop-color="#2d3b41"/>
+      <stop offset="1" stop-color="#1a272d"/>
+    </linearGradient>
+  </defs>
+
+  <path fill="url(#sky)" d="M0 0h1200v360H0z"/>
+  <path fill="#a2aaa2" d="M0 154 109 112 165 129 268 73 320 112 380 94 495 149 622 103 714 148 822 71 867 105 914 89 1006 145 1080 111 1200 159v201H0z"/>
+  <path fill="#748789" d="M0 178 144 147 194 165 283 138 482 179 617 149 750 194 891 129 1006 163 1105 146 1200 177v183H0z"/>
+  <path fill="#586e72" d="M0 207 204 169 341 193 462 183 632 211 818 169 1011 207 1200 177v183H0z"/>
+  <path fill="#c2c7b9" opacity=".52" d="M0 202q230-28 438 3t405 8q192-26 357-18v21q-176-3-357 19-221 19-409-9T0 226z"/>
+
+  <path fill="url(#rock)" stroke="#364c4f" stroke-width="2" d="M0 184l125-2 95 39 193 3 119 37 143 7 144-27 119 1 262 13v105H0z"/>
+  <path fill="#495d55" d="m813 270 168-24 219 12v102H760z"/>
+  <g fill="none" stroke="#a4ad8c" stroke-width="2" opacity=".55">
+    <path d="M822 285q159-46 378-6M795 300q175-50 405-8M776 318q199-52 424-11M759 339q219-57 441-16"/>
+    <path d="M852 274l-34 86m101-101-26 101m104-113-14 113m103-112 2 112m88-108 12 108"/>
+  </g>
+  <path d="M0 168q76-11 138 9l100 43m-238 4 106-14 143 46m-219 4 67-6 131 48" fill="none" stroke="#a6ac9a" stroke-width="2" opacity=".44"/>
+
+  <path fill="#38464a" stroke="#273a41" stroke-width="2" d="M75 0h109l-9 39-18 34-13 43 42 34 84 15-17 8-89-6-48-31-23 33-59 23-34 2v-12l54-25 23-27 10-38-8-30z"/>
+  <path d="M115 0q14 57 2 101l-44 62-53 21M151 0l-13 79-5 34 31 31 53 19m-92-49-30 47-30 15" fill="none" stroke="#9b9783" stroke-width="2" opacity=".55"/>
+
+  <path fill="url(#stone)" stroke="#405155" stroke-width="2" d="M218 190l131 10 368 45 30 20-41 14-383-47-105-13z"/>
+  <path fill="url(#joints)" d="m222 210 100 13 384 44 27-6 14 4-41 14-383-47-105-13z"/>
+  <path fill="url(#water)" stroke="#617e7d" stroke-width="1.5" d="m225 198 108 10 378 46 12 7-19 5-383-45-96-11z"/>
+  <path fill="none" stroke="#d7d7bb" stroke-width="1.5" d="m240 205 94 10 363 44"/>
+  <path fill="#566565" stroke="#35494d" stroke-width="2" d="M133 163v35c0 15 26 28 58 28s58-13 58-28v-35z"/>
+  <path fill="url(#joints)" d="M134 174v24c0 15 25 27 57 27s57-12 57-27v-24z"/>
+  <ellipse cx="191" cy="163" rx="58" ry="25" fill="url(#stone)" stroke="#4c5e60" stroke-width="2"/>
+  <ellipse cx="191" cy="163" rx="45" ry="15" fill="#45656a" stroke="#44595c" stroke-width="2"/>
+  <path d="M166 167q25-7 50 0m-40 4q15-3 30 0" fill="none" stroke="#b9c8b6" opacity=".74"/>
+
+  <path fill="url(#stone)" stroke="#47595a" stroke-width="2" d="m704 255 63-22 94 18-3 26-62 23-94-18z"/>
+  <path fill="url(#joints)" d="m704 265 92 17 63-22-1 17-62 23-94-18z"/>
+  <path fill="url(#water)" stroke="#526e70" stroke-width="1.5" d="m719 258 50-16 75 13-50 17z"/>
+  <path fill="none" stroke="#d2ccb0" stroke-width="2" d="m730 258 41-11 56 9m9 19q44 10 67 32t76 45"/>
+  <path fill="none" stroke="#76928a" stroke-width="4" d="M845 278q42 12 58 30t74 45"/>
+  <path fill="#243940" opacity=".25" d="M0 350h1200v10H0z"/>
+  </g>
+  <path d="M0 120h400v332H0z" fill="url(#strip)"/>
+  <path d="M0 120h400" stroke="#d8b178" stroke-width="2"/>
+  <text x="24" y="157" fill="#e9d8b7" font-family="Georgia, serif" font-size="14" letter-spacing="1.6">FROM THE WELL TO THE VALLEY</text>
+  <path d="M64 248h312M64 318h312M64 388h312" stroke="#a7afa7" stroke-opacity=".25"/>
+  <g font-family="system-ui, Segoe UI, sans-serif">
+    <text x="24" y="208" fill="#d6b37e" font-family="Georgia, serif" font-size="21">01</text>
+    <text x="64" y="208" fill="#f2ede0" font-size="21" font-weight="600">Source records</text>
+    <text x="64" y="232" fill="#cdd3ce" font-size="15">Trace the original events</text>
+    <text x="24" y="278" fill="#d6b37e" font-family="Georgia, serif" font-size="21">02</text>
+    <text x="64" y="278" fill="#f2ede0" font-size="21" font-weight="600">Data pipeline</text>
+    <text x="64" y="302" fill="#cdd3ce" font-size="15">Capture and transform the data</text>
+    <text x="24" y="348" fill="#d6b37e" font-family="Georgia, serif" font-size="21">03</text>
+    <text x="64" y="348" fill="#f2ede0" font-size="21" font-weight="600">Verified result</text>
+    <text x="64" y="372" fill="#cdd3ce" font-size="15">Check against known values</text>
+    <text x="24" y="418" fill="#d6b37e" font-family="Georgia, serif" font-size="21">04</text>
+    <text x="64" y="418" fill="#f2ede0" font-size="21" font-weight="600">Decision</text>
+    <text x="64" y="442" fill="#cdd3ce" font-size="15">Put the result to work</text>
+  </g>
+  <path d="M.75 .75h398.5v450.5H.75z" fill="none" stroke="#9c9d93" stroke-width="1.5"/>
+</svg>

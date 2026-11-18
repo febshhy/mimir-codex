@@ -1,6 +1,8 @@
-# Engineering foundations for full-stack data
+# Engineering playbook for full-stack data
 
-**Use the smallest amount of engineering structure that can establish a correct, maintainable result.** Mimir's default [`$software-design-thinking`](../.agents/skills/software-design-thinking/SKILL.md) provides eight principles for engineering and data work.
+**Design from a clear contract. Trace the affected paths. Verify what the system actually does.**
+
+The eight principles in [`$software-design-thinking`](../.agents/skills/software-design-thinking/SKILL.md) apply to application code, SQL, pipelines, and models. Start with the checks that establish the result and add detail where the risk calls for it.
 
 [Overview](../README.md) · [Full-stack data playbook](DATA_PLAYBOOK.md) · [Tasks](USAGE.md) · [Optional stateful-application walkthrough](ADVANCED_APPLICATION_WALKTHROUGH.md)
 
@@ -17,7 +19,7 @@
 | 7. Verify with evidence | Check semantics, numerical results, statistical validity and the observed runtime within tested scope. | Command, result, time and limitations. |
 | 8. Deliver one thin slice | Ship a useful source-to-consumer increment with compatibility and rollback considered. | Consumer acceptance and safe next change. |
 
-## Choose the right engineering depth
+## Choose the checks the change needs
 
 | Situation | Default approach | Add when needed |
 | --- | --- | --- |
@@ -28,7 +30,7 @@
 
 ## Example: one revenue change across teams
 
-For a captured-revenue dashboard, reconcile one date against a known set of captures.
+**Request.** Show captured revenue by day. Choose one date with a known set of captures and follow it through the system.
 
 1. **Producer:** confirm the actual event ID, version, currency, time, permission and retry semantics in the application source.
 2. **Ingestion:** keep original IDs, handle replay and duplicates, and expose late/missing records rather than silently dropping them.
@@ -39,7 +41,7 @@ For a captured-revenue dashboard, reconcile one date against a known set of capt
 
 Follow the [cross-team slicing method](../.agents/skills/data-slicing/references/CROSS_TEAM_SLICES.md) when work crosses teams.
 
-## Practical verification by discipline
+## Verify what changed
 
 | Work | Appropriate check |
 | --- | --- |

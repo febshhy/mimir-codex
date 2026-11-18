@@ -1,6 +1,6 @@
 # Install Mimir
 
-Preview the installation plan, apply it, and verify the installed Codex instructions and skills.
+**Get Mimir, preview the project changes, apply the approved plan, and start Codex.** Project installation keeps the instructions with your code. Global installation makes shared guidance available to your Linux user.
 
 [Overview](../README.md) · [First task](USAGE.md#first-session) · [How it works](HOW_IT_WORKS.md)
 
@@ -31,7 +31,7 @@ Use `sudo` only to install system packages. **Run Mimir as your normal user.**
 
 ## Get the source
 
-Use the provided **Mimir release ZIP**, or your team's trusted source checkout. Extract or clone it **outside** the target project. Check that the source has `AGENTS.md`, `install.sh` and `scripts/mimir`.
+Clone [Mimir](https://github.com/febshhy/mimir-codex) or extract its ZIP outside your application repository. Use `MIMIR_SRC` for the path to that directory.
 
 ```bash
 MIMIR_SRC="/path/to/extracted/mimir-codex"
@@ -61,7 +61,7 @@ git status --short
 bash "$MIMIR_SRC/scripts/mimir" start --project . --integrate-agents
 ```
 
-Read the planned file changes. Apply only after you approve them:
+Review the planned changes, then apply and verify the installation.
 
 ```bash
 bash "$MIMIR_SRC/scripts/mimir" start --project . --integrate-agents --apply

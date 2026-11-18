@@ -1,12 +1,14 @@
 # Advanced stateful-application walkthrough
 
-**Optional reference for stateful services, transactional producers and production ML serving.**
+**Design from a clear contract. Keep decisions separate from effects. Verify what the system actually does.**
+
+Follow a report export from the request to the stored artifact. Apply the same questions to a stateful service, a transactional producer, or an application that serves model predictions.
 
 Use [Engineering Foundations](../.agents/skills/software-design-thinking/SKILL.md) for the core design questions and the [data playbook](DATA_PLAYBOOK.md) for grain, lineage, statistics, and cross-team delivery.
 
 [Engineering foundations](ENGINEERING_PLAYBOOK.md) · [Mimir overview](../README.md) · [Data playbook](DATA_PLAYBOOK.md)
 
-## Advanced stateful application walkthrough
+## The foundation
 
 For a stateful application with important external effects, six questions make a useful deeper analysis:
 

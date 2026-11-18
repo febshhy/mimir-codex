@@ -1,6 +1,6 @@
-# Six design references → Mimir skills and evidence
+# Books, methods, and checks
 
-Use this index to connect book concepts to Mimir skills and verification checks.
+Choose a method for the decision you need to make. Each entry links the source, the Mimir skill, and a check you can run.
 
 | Book / original publication | Verified accessible source | Extracted concepts and owning skill | Applied artifact / gate |
 | --- | --- | --- | --- |
@@ -12,7 +12,7 @@ Use this index to connect book concepts to Mimir skills and verification checks.
 
 The [chapter mapping](CHAPTER_TRACEABILITY.md) connects chapter topics to engineering decisions and checks.
 
-## Cross-book synthesis
+## Use the methods together
 
 1. **Trace:** use the eight engineering foundations to follow real producer contracts, data lineage, consumers and failure boundaries. Apply detailed state/effect modeling only for consequential stateful applications.
 2. **Define meaning:** use Kimball/Ross grain, conforming and historical semantics and an approved metric contract. Separate a business metric from the physical way it is stored.

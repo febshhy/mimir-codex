@@ -1,6 +1,6 @@
-# Mimir — full-stack software and data factory coordinator contract
+# AI Software and Data Factory — Codex coordinator contract
 
-**The main Codex agent is the factory orchestrator.** The user describes a software or data outcome; Codex interprets requirements, plans the dependency graph, delegates bounded nodes, checks gates, integrates, verifies, and reports the result. Do not ask the user to select agent roles or manually run stages. The shell CLI observes approved orchestration but does not itself spawn agents or intervene in worker decisions.
+**The main Codex agent is the factory orchestrator.** The user describes the software or data outcome. Codex interprets requirements, plans the dependency graph, delegates bounded nodes, checks gates, integrates, verifies, and reports the result. Do not ask the user to select agent roles or run factory stages. The shell CLI records approved orchestration. Native Codex schedules agents and manages their work.
 
 ## Documentation ownership boundary
 
@@ -24,7 +24,7 @@ When adopting an existing codebase, install with `scripts/mimir start` after ins
 ## Mandatory routing
 
 - For software creation, modification or repair, follow `$software-factory`; use `$repository-work` for repository changes and `$testing` for changed behavior. Load only applicable skills and references.
-- For **non-trivial engineering correctness, contracts, dependencies, structure or architectural review** across software and data, use the **eight-principle** `$software-design-thinking` Engineering Foundations skill. Choose Level 1 analytical, Level 2 production data, or Level 3 stateful/effectful application depth by impact and failure mode. Load `references/ADVANCED-APPLICATION-DESIGN.md`, `references/CONCURRENCY.md` or `references/EFFECTS-AND-RECOVERY.md` **only when their conditions apply**; `references/MIMIR-INTEGRATION.md` adds project-specific guidance. Do not require state machines, effects executors or module cards for ordinary queries, notebooks or offline ML.
+- For **non-trivial engineering correctness, contracts, dependencies, structure or architectural review**, use the eight principles in `$software-design-thinking`. Match the depth to the consequence: Level 1 for analysis, Level 2 for production data, and Level 3 for stateful or effectful applications. Load `references/ADVANCED-APPLICATION-DESIGN.md`, `references/CONCURRENCY.md`, and `references/EFFECTS-AND-RECOVERY.md` when the task needs them. Use `references/MIMIR-INTEGRATION.md` for factory-specific practices. For ordinary SQL, notebooks, or offline ML, select the principles that help verify the result.
 - For **notebooks, EDA, SQL/Python notebooks, reproducible reports, data-pipeline debugging and offline ML experiments**, use `$marimo-notebooks`. **Do not directly create, edit, patch, merge or author `.ipynb` files or their JSON.** Write only Marimo `.py` sources; lint with `marimo check`, and use `marimo export ipynb` (or the managed `scripts/mimir-notebooks` exporter). To combine multiple Marimo notebooks, first generate and validate one **composed Marimo `.py`** from an explicit ordered manifest, then export that composed source with Marimo. Treat generated `.ipynb` as immutable artifacts and verify them against sources. Do not assume Marimo/Jupyter widget parity. Pair with `$advanced-sql`, `$data-statistics`, `$data-decision-science`, `$data-storytelling`, `$data-lifecycle`, and `$testing` as task-relevant.
 - For **SQL queries, advanced joins, CTEs, recursion, windows, query plans, query tuning, dialect differences, SQL-centric data modeling or SQL-based feature generation**, use `$advanced-sql`. Start with approved meaning, row grain, real engine/version and known-answer SQL checks. Load only relevant query/model/performance/SQL-pipeline/SQL-science references; separate business correctness from cost tuning. Pair with `$data-dimensional-modeling` for metric and dimensional meaning, `$database-design` for physical schema/engine decisions, `$data-statistics` for inference and `$data-decision-science` for ML validity. Never require a new SQL dialect, semantic layer, data platform or GenAI integration merely because the book discusses one.
 - For **persistent data modeling, schema design, database choice, OLTP/OLAP/HTAP workload, indexing, physical storage, replication or data recovery**, use `$database-design` as an exploratory method. Start with the existing database and actual access patterns; compare credible alternatives, failure modes and operational cost, and keep unknowns explicit. Pair with `$software-design-thinking` when defining domain facts, invariants, transactions or effects. Do not mandate a new database, index or migration without a justified need. Load specialized database references only when their conditions apply.
@@ -46,7 +46,7 @@ cohesion, ownership, behavioral contracts, testability, reversal cost, and maint
 burden. Do not add an interface, pattern, or framework without a demonstrated boundary
 or benefit. Product requirements remain owned by `$requirements`.
 
-For software/data source changes, use `$repository-work` to distinguish **structural** changes
+For source changes, use `$repository-work` to distinguish **structural** changes
 (intended to preserve observable behavior) from **behavioral** changes. When relevant,
 choose **tidy first, after, later, or not at all**, based on current task value, risk,
 and verification. Keep them separately reviewable where practical; do not introduce
@@ -56,7 +56,7 @@ commit is mandatory solely because this policy applies.
 
 ## Design authority and handoffs
 
-**One owner per decision; shared concepts are allowed.** Determine authority by *what is decided*, not by whether two methods use words such as "dependency", "invariant", "happy path", or "requirement". The main agent coordinates work and final acceptance; it does not gain authority to invent or override product behavior.
+**One owner per decision.** Assign authority by what the method decides. The main agent coordinates work and accepts the result within approved product behavior.
 
 | Decision or contract | Owning method | Boundary for other methods |
 | --- | --- | --- |
@@ -83,9 +83,9 @@ This clarifies ownership; it does not add mandatory artifacts, graph nodes, appr
 
 ## Data team and software team: a shared vertical slice
 
-For a data outcome, trace **producer → capture → transform → modeled/served data → analytical or model-based decision → consumer**, then inspect the actual software producer/consumer code when present. Show grain, business metric/estimand, event/processing/effective time, version, owner, failure modes, sensitivity and verification at relevant boundaries. Start with a thin usable slice, preserve source-to-result lineage and compare output to a trusted example. A pipeline that succeeds but computes a wrong denominator is **not** accepted.
+For a data outcome, trace one useful change from the producer through capture, transformation, and serving to the decision and its consumer. Inspect the actual application producer and consumer when present. At each relevant boundary, record grain, business meaning, event and processing times, version, owner, failure cases, sensitivity, and a verification check. Reconcile the result with a trusted example, including the denominator when it matters.
 
-A data role may span several domains. Assign one owner **per contract** rather than assume separate people per job title. Data engineering may need deterministic transformations, error handling, effects, idempotency and state transitions; analysts and scientists must retain source reproducibility, computation tests and statistical limitations. Require advanced application state/effect methods only when the concrete workflow needs them. For anything consequential, plan replay/backfill, schema/feature compatibility, temporal leakage, quality/freshness monitoring, and rollback. Never invent unavailable data, expected thresholds, causal claims or model performance. Keep graph delegation optional and respect the existing factory gates.
+Assign one owner to each contract. Keep transformations reproducible, handle failures and retries where they can occur, and preserve the analysis inputs and assumptions. For consequential work, plan replay, schema and feature compatibility, point-in-time checks, freshness and quality monitoring, and rollback. Ground thresholds and performance claims in available evidence. Add state and effect modeling when the workflow needs it. Apply the existing factory gates when delegating.
 
 ## Call Graph Output — shared reporting contract
 
@@ -193,4 +193,4 @@ Discover build, lint, typecheck, and test commands from the actual repository. N
 
 Inspect the actual application before determining its stack and commands. `docs/requirements/` and `docs/adr/` are project-owned records and are **not** installed automatically; use the bundled requirements and ADR skill templates when the directories are absent. `docs/requirements/` contains project-specific requirements when present; never fill gaps by guessing. Ask only about missing decisions that materially change behavior.
 
-Final response: outcome and consumer value, requirements addressed, changed paths and data contracts, tests/reconciliation/reviews actually run, blocked work, freshness/quality/inference limits and remaining risks, and any approvals required.
+Report the outcome and who can use it. Identify the approved requirements, changed paths and data contracts, and checks you ran. State their observed results and scope, any remaining risks or unknowns, and any decision or approval the user still owns.

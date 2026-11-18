@@ -1,6 +1,6 @@
 # Use Mimir on a real task
 
-**Start with a clear outcome. Choose only the skills and checks your task needs.** Mimir serves data analysts, data engineers, analytics engineers, data scientists, ML engineers and application engineers working on data contracts.
+**Tell Codex the outcome you need. Mimir supplies the engineering procedure.** Start with the report, dataset, model, or application behavior you want to change.
 
 [Overview](../README.md) · [Installation](SETUP.md) · [How it works](HOW_IT_WORKS.md)
 
@@ -12,7 +12,9 @@ Run `codex` from the target project root and start with this prompt.
 
 Review the proposed change and ask for the executed checks and their scope.
 
-## Full-stack data prompts
+## Task examples
+
+Replace the text in square brackets with your own context. Review the proposed scope and checks before asking Codex to make changes.
 
 ### Data analyst — investigate a metric
 
@@ -28,7 +30,7 @@ Review the proposed change and ask for the executed checks and their scope.
 
 ### Advanced SQL — fix correctness or performance
 
-> Review [query] using `$advanced-sql`. State each input grain and join cardinality. Test duplicates, equal-amount transactions, NULL/anti-join behavior and deterministic order. Inspect the **actual** SQL dialect and representative execution plan before tuning; verify equivalent result after every optimization.
+> Review [query] using `$advanced-sql`. Trace the grain and join cardinality of each input. Test duplicate rows, equal-amount transactions, NULL handling, anti-joins, and ordering where they affect the result. Use the target engine’s execution plan to guide tuning and rerun the result checks after each change.
 
 ### Data scientist — evaluate a model
 
@@ -61,7 +63,7 @@ Review the proposed change and ask for the executed checks and their scope.
 | Formal rule | Draft candidate Bend laws only for a reviewed, critical invariant; keep model proof separate from production tests. |
 | Product copy | State the supported audience, decision and verified behavior; remove unsupported claims and confusing language. |
 
-## Acceptance checklist
+## Decide whether the result is ready
 
 - Did the outcome, business meaning and relevant boundaries receive explicit approval?
 - Are the file paths, source records, metric/feature grain and timestamps verified or marked unknown?

@@ -1,19 +1,21 @@
 # How Mimir works
 
-**Mimir coordinates source-grounded engineering and data analysis around one verifiable outcome.** It supplies instructions, focused skills, optional local orchestration and review contracts.
+**Start with the outcome. Trace the affected paths. Check the result.** Mimir gives Codex a way to show what it found, what it changed, and which checks it ran.
 
 [Overview](../README.md) · [Install](SETUP.md) · [Use on a task](USAGE.md)
 
-## From question to evidence
+## The method
+
+A dashboard change can reach back to the query, the model, or the application that produces the data. Trace the actual path before choosing where to make the change.
 
 | Stage | Typical work | Inspectable evidence |
 | --- | --- | --- |
-| **Define** | Identify the business question or behavior, owner, grain, time, success criteria and unknowns. | Approved contract and explicit assumptions. |
+| **Understand** | Identify the business question or behavior, owner, grain, time, success criteria and unknowns. | Approved contract and explicit assumptions. |
 | **Trace** | Follow relevant application source, ingestion, models, queries, notebooks and consumers as they exist. | Actual file paths, queries, lineage, and gaps marked unknown. |
 | **Choose** | Compare the smallest change with credible alternatives using the existing stack. | Tradeoffs, risks, acceptance plan. |
-| **Implement** | Modify only the agreed slice; keep boundaries and ownership clear. | Reviewable source diff and versioned contracts. |
+| **Change** | Modify only the agreed slice; keep boundaries and ownership clear. | Reviewable source diff and versioned contracts. |
 | **Verify** | Run the relevant fixture, test, reconciliation, model evaluation and operational check. | Commands and observed results. |
-| **Communicate** | Present the metric, decision, limitations and safe next step. | Reproducible output and a consumer-oriented explanation. |
+| **Report** | Present the metric, decision, limitations and safe next step. | Reproducible output and a consumer-oriented explanation. |
 
 The default [engineering skill](../.agents/skills/software-design-thinking/SKILL.md) contains eight principles. Mimir loads advanced application state/effect methods only when the task warrants them.
 
@@ -31,6 +33,8 @@ The default [engineering skill](../.agents/skills/software-design-thinking/SKILL
 One person may perform several roles. The [data playbook](DATA_PLAYBOOK.md) details data contracts and vertical slices; the [engineering playbook](ENGINEERING_PLAYBOOK.md) covers cross-role foundations.
 
 ## Example: captured revenue, from source to dashboard
+
+**Request.** Show captured revenue by day. Trace where captures are recorded, how duplicates are handled, and which currency and timezone the dashboard uses. Reconcile one day against known source records.
 
 ```ts
 Checkout capture event with identity, time and version
