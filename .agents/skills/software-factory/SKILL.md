@@ -7,6 +7,17 @@ description: Orchestrate software and data product delivery from a user goal thr
 
 **Authority:** only the main Codex agent orchestrates, schedules, integrates, and accepts; workers execute bounded nodes. Approved behavior stays with `$requirements`/reviewed `LAWS.bend`, domain and GUI contracts with their skills, verification with `$testing`, and delegated A/E/R with `$graph-protocol`. No worker approves new product policy.
 
+## Sol/Luna agent workflow
+
+- GPT-6.2 Sol coordinates the task, decides material issues, and independently reviews changes.
+- GPT-6 Luna handles routine edits, shell commands, tests, and routine Git work. Start each subagent with fresh context (`fork_turns: none`) and a bounded A/E/R assignment.
+- For every delegated WRITE, a different Luna agent collects diff, source, and check evidence. Sol reviews that evidence and accepts only through the schema-3 factory gate.
+- If an agent needs execution context, provide a source-derived Call Graph Output with the real entry point and indented `→` calls in a `ts` block. Show Production and Tests separately when their wiring differs. Mark proposed paths as proposed; do not claim runtime verification from fixtures.
+- A is the successful task flow: name each node's single owner and each output passed along an edge. Independent nodes may run in parallel; dependents start only after required inputs are accepted. E records handoff breakpoints (wrong context, missing input, misinterpretation) and coordinator-owned mitigations. R gives each worker its assigned subgraph, applicable design method, verification command, inputs, and WHY. A small task can use one inline node with the same A/E/R channels.
+- The coordinator records the planned subgraph before spawning; the worker owns it until returning the implemented graph with actual nodes, flows, breakpoints, and named outputs. The coordinator compares planned and returned nodes, flows, and breakpoints and checks verification before acceptance. Logs, leases, and receipts wrap the graph as evidence; they are not task flow. Use a source-derived call graph in R context when runtime understanding is needed.
+
+In the tracked Mimir clone, `.codex/config.toml` sets Sol as coordinator, enables multi-agent tools, and sets `sandbox_mode = "workspace-write"`, `approval_policy = "on-request"`, and `approvals_reviewer = "auto_review"`. The configured hook checks the current model against launch target profile/model pairings and requires `fork_turns = "none"`; it routes controlled command/edit/write tools by current model. PreToolUse does not document a caller profile field, so the hook cannot identify the caller's profile. The reviewer profile disables supported shell, app, plugin, memory, and permission-request capabilities, but those flags do not prove a live sandbox. Project installation retains model/routing hooks and agent profiles but omits those three approval keys from generated project config. This is a Mimir clone-scoped adaptation and does not claim to reproduce Heimdall's installer verbatim. Explain project/hook trust during setup. Desktop users choose **Approve for me** in the current chat where available. Fixtures exercise documented event fields but do not establish live Codex runtime enforcement.
+
 ```text
 Inspect goal/repo → Retrieve authorized behavior
   → Classify direct | graph | critical
@@ -14,7 +25,7 @@ Inspect goal/repo → Retrieve authorized behavior
       → Tidy first | after | later | never (only if justified)
         → Direct bounded work OR plan DAG and delegate ready nodes
           → Verify (incl. independent review for delegated WRITE)
-            → Reconcile observed A/E/R + actual changes
+            → Compare planned and returned A/E/R + actual changes
               → Complete | Partial(reason) | Blocked(reason)
 ```
 
@@ -32,11 +43,11 @@ Determine depth from impact if wrong, contract significance and existing detecti
 
 ```text
 Plan A/E/R → scripts/factory init --plan <plan.json> --graph .work/graphs/<task>.json
-  → ready? → prompt → begin / run → end --return → independent reviewer
+  → ready? → prompt (planned subgraph) → begin / run → end --return (implemented graph) → independent reviewer
     → actual tests/diff → scripts/factory validate --graph <record>
 ```
 
-Dispatch only ready nodes; missing/failed/disputed predecessors block successors. READ/RUN use `run --return -- <argv>`; WRITE uses `prompt`, `begin` and `end --return`. Prefer native `explorer` for READ, `worker` for WRITE; independent review uses `mimir_reviewer` when installed or separate `default` read-only reviewer. Check different identities and actual observations: a role label does not enforce independence. **Factory leases an entire Git worktree:** serialize nodes in one worktree, even disjoint files. Parallel WRITE requires prepared isolated worktrees, disjoint ownership and deliberate integration. Retry a failed node at most once after relevant correction. No need for extra agents for trivial tasks. Read `references/LIFECYCLE.md` for examples and critical release boundary.
+Dispatch only ready nodes; a dependent node starts after its required inputs are accepted. READ/RUN use `run --return -- <argv>`; WRITE uses `prompt`, `begin` and `end --return`. Prefer native `explorer` for READ, `worker` for WRITE; independent review uses `mimir_reviewer` when installed or separate `default` read-only reviewer. Check different identities and actual observations: a role label does not enforce independence. **Factory leases an entire Git worktree:** serialize nodes in one worktree, even disjoint files. Parallel WRITE requires prepared isolated worktrees, disjoint ownership and deliberate integration. No need for extra agents for trivial tasks. Read `references/LIFECYCLE.md` for examples and critical release boundary.
 
 ## Selected Bend2 gate
 
@@ -51,4 +62,4 @@ Smoke proof never qualifies. Law or normative-assumption changes return to opera
 
 ## Acceptance and report
 
-Run the actual applicable build/lint/tests and representative data/metric reconciliation or model evaluation when changed, inspect Git diff and independent delegated-WRITE review, then validate every planned node and schema-3 return. Reject missing evidence, contradicting observation, required but absent review, invalid graph, or failed checks. Graph comparison is not application correctness. Report changed paths, approved requirement coverage, executed commands/results, review/evidence, unresolved risks and approvals. Include source-derived call-graph slices when `AGENTS.md` requires them; mark stale/unverified evidence, use the project's inspected revision and keep logs in `.work/`. Never claim a command/proof ran without observation, delete required checks to save tokens, or copy full logs into worker prompts. `jq` is required by the controller; optional tools never change the A/E/R contract.
+Run the actual applicable build/lint/tests and representative data/metric reconciliation or model evaluation when changed, inspect Git diff and independent delegated-WRITE review, then compare every planned node, flow, and breakpoint with the returned schema-3 graph. Reject missing evidence, contradicting observation, required but absent review, invalid graph, or failed checks. Graph comparison is not application correctness. Report changed paths, approved requirement coverage, executed commands/results, review/evidence, unresolved risks and approvals. Include source-derived call-graph slices when `AGENTS.md` requires them; mark stale/unverified evidence, use the project's inspected revision and keep logs in `.work/`. Never claim a command/proof ran without observation, delete required checks to save tokens, or copy full logs into worker prompts. `jq` is required by the controller; optional tools never change the A/E/R contract.

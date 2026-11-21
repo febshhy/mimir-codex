@@ -124,7 +124,7 @@ verify_files(){
   while IFS=$'\t' read -r rel sha; do
     [[ -n $rel ]] || continue
     safe_path "$rel"
-    case "$rel" in .mimir/AGENTS.md|.mimir/install.sh|.agents/skills/*|.codex/config.toml|.codex/agents/*|scripts/*|proofs/*) ;; *) fail "Unexpected managed path: $rel";; esac
+    case "$rel" in .mimir/AGENTS.md|.mimir/install.sh|.agents/skills/*|.codex/config.toml|.codex/model-routing.py|.codex/agents/*|scripts/*|proofs/*) ;; *) fail "Unexpected managed path: $rel";; esac
     dest="$TARGET/$rel"
     [[ -f "$dest" && ! -L "$dest" ]] || fail "Missing managed file: $rel"
     found=$(sha256sum -- "$dest"); found=${found:0:64}
@@ -293,7 +293,7 @@ fi
 # Install a project model default as a managed file. Never overwrite an existing
 # unrelated .codex/config.toml: the standard conflict gate will fail safely.
 [[ -f "$SOURCE/.codex/config.toml" && ! -L "$SOURCE/.codex/config.toml" ]] || fail 'Release has no Codex model config'
-RELS+=(.codex/config.toml .mimir/AGENTS.md .mimir/install.sh)
+RELS+=(.codex/config.toml .codex/model-routing.py .mimir/AGENTS.md .mimir/install.sh)
 ((${#RELS[@]} > 2)) || fail 'Release contains no installable files'
 safe_path .mimir/manifest.json
 safe_path "$ACTIVE_AGENTS"
@@ -391,6 +391,10 @@ fi
 if ((BEND2)); then
   printf '%s\n' "$BEND_PIN" > "$STAGE/bend-version"
 fi
+# Approval behavior belongs to the trusted Mimir clone. Keep these defaults in
+# its config, while omitting them from the generated application project config.
+awk '!/^(sandbox_mode|approval_policy|approvals_reviewer)[[:space:]]*=/' \
+  "$SOURCE/.codex/config.toml" > "$STAGE/project-config.toml" || fail 'Failed to render project Codex config.'
 mkdir -p -- "$BACKUP"
 declare -a WRITTEN=()
 rollback(){
@@ -448,7 +452,7 @@ write_file(){
 TAB="$STAGE/managed.tsv"
 : >"$TAB"
 for rel in "${RELS[@]}"; do
-  case "$rel" in .mimir/AGENTS.md) from="$STAGE/installed-agents.md";; .mimir/install.sh) from="$SOURCE/install.sh";; proofs/BEND_VERSION) from="$STAGE/bend-version";; *) from="$SOURCE/$rel";; esac
+  case "$rel" in .mimir/AGENTS.md) from="$STAGE/installed-agents.md";; .mimir/install.sh) from="$SOURCE/install.sh";; proofs/BEND_VERSION) from="$STAGE/bend-version";; .codex/config.toml) from="$STAGE/project-config.toml";; *) from="$SOURCE/$rel";; esac
   sha=$(sha256sum -- "$from"); sha=${sha:0:64}
   printf '%s\t%s\n' "$rel" "$sha" >>"$TAB"
   # Content hashes do not encode permissions. Re-copy when the content matches

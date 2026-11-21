@@ -11,6 +11,7 @@ import fcntl
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import stat
@@ -21,7 +22,7 @@ import uuid
 
 SCHEMA = 1
 MANAGED_DIRS = ('.agents/skills', '.codex/agents', 'scripts')
-EXTRA = ('.mimir/AGENTS.md', '.mimir/install.sh')
+EXTRA = ('.codex/config.toml', '.codex/model-routing.py', '.mimir/AGENTS.md', '.mimir/install.sh')
 STATE_KINDS = {'prepared', 'applying', 'incomplete', 'installed_verified', 'complete', 'reverting', 'reverted'}
 
 class LifecycleError(Exception):
@@ -156,6 +157,12 @@ def render_agents(source, bend2):
 
 def expected_content(source, rel, bend2):
     if rel == '.mimir/AGENTS.md': return render_agents(source, bend2)
+    if rel == '.codex/config.toml':
+        config = (source / rel).read_text(encoding='utf-8')
+        omitted = {'sandbox_mode', 'approval_policy', 'approvals_reviewer'}
+        lines = [line for line in config.splitlines(keepends=True)
+                 if not any(re.match(r'^' + re.escape(key) + r'\s*=', line) for key in omitted)]
+        return ''.join(lines).encode('utf-8')
     if rel == 'proofs/BEND_VERSION' and bend2:
         if not shutil.which('bend'): reject('Bend 2 not available for selected proof scope')
         p = run('bend', '--version')
