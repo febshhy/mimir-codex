@@ -15,7 +15,7 @@ Mimir requirements and lifecycle records outside `docs/`.
 
 ## Codex subagent runtime boundary
 
-For bounded engineering delegation, use Codex's built-in `explorer` and `worker` roles. For independent review, prefer the project-scoped `mimir_reviewer` (`.codex/agents/mimir_reviewer.toml`) when installed; otherwise assign a separate `default` subagent an explicit read-only review task. Never assume a role label enforces read-only access or proves reviewer independence. Native Codex manages agent spawning; `scripts/factory` only observes lifecycle boundaries and validates evidence. **Only one active factory node may use a given Git worktree**. Use separate worktrees for simultaneous WRITE nodes and verify integration before acceptance; otherwise serialize nodes.
+For routine execution, use the project-scoped `mimir_routine` profile with GPT-6 Luna. Where project profiles are unavailable, use a built-in `explorer` or `worker` pinned to Luna only if the active routing rules permit that pairing. For independent review, prefer the project-scoped `mimir_reviewer` (`.codex/agents/mimir_reviewer.toml`) when installed; otherwise assign a separate `default` subagent an explicit read-only review task. Never assume a role label enforces read-only access or proves reviewer independence. Native Codex manages agent spawning; `scripts/factory` only observes lifecycle boundaries and validates evidence. **Only one active factory node may use a given Git worktree**. Use separate worktrees for simultaneous WRITE nodes and verify integration before acceptance; otherwise serialize nodes.
 
 ## Secret access and existing-project discovery
 
@@ -181,7 +181,9 @@ For actual UI construction or consequential review, route behavior/state to `$gu
 
 ## Cost and context
 
-- Simple local work: main agent only. Complex or risky work: smallest sufficient graph. Subagents are optional, not an objective.
+- Delegate substantive routine work to Luna at the first eligible point, including small fixes and read-only investigations. If implementation needs a Sol decision, have Luna gather the facts first, then return execution to Luna once Sol settles the decision.
+- Route routine inspection, drafting, edits, commands, tests, Git, and monitoring to Luna when the scope and success criteria are clear. Give Luna ownership through completion and require it to return observed results. Luna does not recursively delegate.
+- Use inline A/E/R for a single eligible read or command. Use schema 3 for delegated writes and work with multiple dependent nodes. If no substantive Luna node is eligible, record the specific blocker and keep Sol's direct work to coordinator duties and necessary preflight or recovery.
 - Give each worker only task, relevant requirements, paths, owner and required output. Keep full logs under `.work/`. Avoid repeating the global policy in every worker packet.
 - Prefer existing project stack, tests and operational conventions. Require verification evidence even when it increases token usage.
 
