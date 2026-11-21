@@ -81,6 +81,14 @@ R is the delegation prompt completeness check. Every worker needs:
 - **Verification command** -- how the worker proves the work is correct
 - **WHY** -- the reason this node exists, not just what to change
 
+When an existing execution path materially affects an assignment, the
+coordinator includes or references the smallest relevant source-inspected call
+graph as an R input before dispatch. Identify the inspected revision and any
+relevant local changes. Separate **Production** and **Tests** when their wiring
+differs. Label an unestablished path **unknown** or **proposed**. Follow the
+shared **Call Graph Output** contract in `AGENTS.md`. This source context
+supplements R. A continues to describe orchestration.
+
 If any R is missing from the prompt, the worker will guess. Guessing is the source of misinterpretation (§4).
 
 ## 6. Trust at boundary
@@ -145,3 +153,11 @@ TASK
 ```
 
 **If the implemented graph does not match the delegated subgraph, the delegation is wrong.**
+
+## Mimir agent roles and evidence gate
+
+GPT-6.2 Sol coordinates, resolves material decisions, independently reviews changes, and accepts through the schema-3 factory gate. GPT-6 Luna performs routine edits, shell commands, tests, and routine Git work. Start every subagent with fresh context (`fork_turns: none`) and a bounded A/E/R assignment. For every delegated WRITE, assign a different Luna agent to collect diff, source, and check evidence; Sol reviews that evidence before factory acceptance. A valid return is necessary but does not replace diff review or observed checks.
+
+When an agent needs runtime context, provide a source-derived Call Graph Output in a `ts` block: actual entry point first, then indented `→` calls. Include separate Production and Tests traces when wiring differs. Label a trace proposed until its path exists in source; fixtures do not prove a live Codex hook ran.
+
+Mimir's PreToolUse hook checks the current model against launch target profile/model pairs and requires `fork_turns = "none"`; it routes controlled command/edit/write tools by current model. PreToolUse does not document a caller profile field, so the hook cannot identify the caller's agent profile. Fixtures use documented fields but do not establish live Codex runtime enforcement. The reviewer profile disables supported shell, app, plugin, memory, and permission-request capabilities; those flags do not prove a live sandbox.

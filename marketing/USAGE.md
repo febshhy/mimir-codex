@@ -12,6 +12,10 @@ Start a Codex session in the installed project using the app, IDE extension, or 
 
 Review the proposed change and ask for the executed checks and their scope.
 
+For delegated engineering work, GPT-6.2 Sol coordinates and independently reviews; GPT-6 Luna performs bounded implementation and evidence tasks. Start subagents with fresh context (`fork_turns: none`) and include A/E/R assignment, evidence outputs, and explicit acceptance criteria. For each delegated WRITE, a different Luna agent collects the diff, source, and check evidence. Sol reviews it and accepts only through the schema-3 factory gate. When a runtime path needs explanation, provide a source-derived `ts` call trace with the real entry point and indented `→` calls; separate Production and Tests when their wiring differs. Mark unimplemented paths proposed.
+
+The configured hook checks the current model, exact target profile/model pairings for launches, `fork_turns: none`, and Luna-model command/edit/write routing. PreToolUse does not document a caller profile field, so the hook cannot identify the caller's agent profile. Fixtures exercise these documented field checks; they do not verify live Codex hook execution or enforcement. The reviewer profile disables supported shell, app, plugin, memory, and permission-request capabilities, but feature flags do not prove a live sandbox.
+
 ## Task examples
 
 Replace the text in square brackets with your own context. Review the proposed scope and checks before asking Codex to make changes.

@@ -120,7 +120,11 @@ The project installer adds a **short reference** to the active root `AGENTS.md` 
 
 > Read `.mimir/AGENTS.md` and the applicable skill documentation in `.agents/skills/`. Show the actual source evidence and the tests you plan to run. Do not invent contracts or claim unrun checks.
 
-Project `.codex/config.toml` sets the main model to `gpt-6.2-sol` with `low` effort. The project reviewer configuration selects `gpt-6-luna` with `high` effort. Resolve any conflict with an existing unmanaged `.codex/config.toml` before rerunning installation.
+Project `.codex/config.toml` sets the coordinator model to `gpt-6.2-sol` with `high` effort and enables multi-agent tools. The reviewer profile uses `gpt-6.2-sol` with `high` effort and disables supported shell, app, plugin, memory, and permission-request capabilities; the routine profile uses `gpt-6-luna`. Resolve any conflict with an existing unmanaged `.codex/config.toml` before rerunning installation.
+
+The tracked Mimir clone also sets `sandbox_mode = "workspace-write"`, `approval_policy = "on-request"`, and `approvals_reviewer = "auto_review"`. These approval defaults stay in the trusted clone. Installed target projects receive Mimir's model/routing files and agent profiles, while the installer omits those three approval keys from generated project config. This clone-scoped adaptation does not claim to match Heimdall's installer verbatim. Inspect and trust the project and its hooks before enabling them. In the Codex desktop app, choose **Approve for me** in the current chat where available.
+
+The workflow assigns GPT-6.2 Sol to coordinate, decide material issues, independently review changes, and accept through the schema-3 factory gate. GPT-6 Luna performs routine edits, shell commands, tests, routine Git, and independent evidence collection. Every delegated WRITE starts a separate Luna evidence collection for Sol to review. Subagents start with fresh context (`fork_turns: none`) and a bounded A/E/R assignment. The configured PreToolUse hook uses the current model to check the Sol launcher and exact target profile/model pairing, and routes controlled command/edit/write tools to the Luna model. PreToolUse does not document a caller profile field. Fixtures cover these field checks; they do not verify live Codex hook execution or enforcement. Profile feature flags do not prove a live sandbox.
 
 For notebook projects, run `python scripts/mimir-notebooks audit --root notebooks` in CI and register every generated `.ipynb` in a manifest.
 

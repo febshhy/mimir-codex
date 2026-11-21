@@ -97,8 +97,30 @@ Start with the smallest testable vertical slice. Assign an owner to each cross-t
 
 | Session role | Configured model | Reasoning |
 | --- | --- | --- |
-| Main implementation | `gpt-6.2-sol` in `.codex/config.toml` | `low` |
-| Optional independent review | `gpt-6-luna` in `.codex/agents/mimir_reviewer.toml` | `high` |
+| Coordinator | `gpt-6.2-sol` in `.codex/config.toml` | `high` |
+| Independent review | `gpt-6.2-sol` in `.codex/agents/mimir_reviewer.toml` | `high` |
+
+GPT-6.2 Sol coordinates work, decides material issues, independently reviews changes, and accepts delegated WRITE nodes through the schema-3 factory gate. GPT-6 Luna handles routine implementation and evidence collection. Start each subagent with fresh context (`fork_turns: none`) and a bounded A/E/R assignment. For each delegated WRITE, a different Luna agent gathers diff, source, and check evidence for Sol's review. Where the Codex desktop app offers it, choose **Approve for me** in the current chat.
+
+The trusted Mimir clone sets `sandbox_mode = "workspace-write"`, `approval_policy = "on-request"`, and `approvals_reviewer = "auto_review"`. The installer retains model/routing files and agent profiles in installed projects but removes those three approval keys from generated project config. This is clone-scoped behavior, not a claim that Mimir's installer matches Heimdall verbatim. Review and trust a project and its hooks before enabling them.
+
+The configured PreToolUse hook uses the documented current model to check that launches come from Sol and target the pinned `mimir_routine`/Luna or `mimir_reviewer`/Sol pair, with `fork_turns = "none"`. It routes controlled command/edit/write tools to the Luna model. PreToolUse does not document a caller profile field, so this hook does not identify the caller's agent profile. The reviewer profile disables supported shell, app, plugin, memory, and permission-request capabilities; these flags do not prove a live sandbox. Fixtures exercise the field checks but do not verify live Codex hook execution or enforcement.
+
+```ts
+Production (configured; live hook runtime unverified):
+Codex PreToolUse event for Agent
+  → `.codex/config.toml` PreToolUse command
+    → `.codex/model-routing.py` main()
+      → handle(event)
+        → valid_spawn(tool_input, caller_model) for spawn tools
+        → current-model check for command/edit/write tools
+          → allow or deny
+
+Tests:
+`python3 -m unittest discover -s tests -p 'test_*.py'`
+  → `tests/test_model_routing.py`
+    → `.codex/model-routing.py` handle(event) / valid_spawn(tool_input, caller_model)
+```
 
 ## Marimo-first notebook rule
 
