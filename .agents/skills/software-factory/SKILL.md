@@ -15,7 +15,8 @@ and reviews. Follow **Call Graph Output** in the Mimir coordinator instructions
 ## Sol/Luna agent workflow
 
 - GPT-6.2 Sol coordinates the task, decides material issues, and independently reviews changes.
-- GPT-6 Luna handles routine edits, shell commands, tests, and routine Git work. Start each subagent with fresh context (`fork_turns: none`) and a bounded A/E/R assignment.
+- Delegate substantive routine work to GPT-6 Luna at the first eligible point, including read-only work and small fixes. Use `mimir_routine` with fresh context (`fork_turns: none`) and bounded A/E/R. Luna owns routine inspection, edits, commands, tests, Git, and monitoring through completion.
+- When execution depends on a material decision, delegate fact collection to Luna, resolve the decision as Sol, and return execution to Luna. Record the specific blocker if no substantive Luna assignment is eligible.
 - For every delegated WRITE, a different Luna agent collects diff, source, and check evidence. Sol reviews that evidence and accepts only through the schema-3 factory gate.
 - If an agent needs execution context, provide a source-derived Call Graph Output with the real entry point and indented `→` calls in a `ts` block. Show Production and Tests separately when their wiring differs. Mark proposed paths as proposed; do not claim runtime verification from fixtures.
 - A is the successful task flow: name each node's single owner and each output passed along an edge. Independent nodes may run in parallel; dependents start only after required inputs are accepted. E records handoff breakpoints (wrong context, missing input, misinterpretation) and coordinator-owned mitigations. R gives each worker its assigned subgraph, applicable design method, verification command, inputs, and WHY. A small task can use one inline node with the same A/E/R channels.
@@ -28,7 +29,7 @@ Inspect goal/repo → Retrieve authorized behavior
   → Classify direct | graph | critical
     → Discover/design only needed scope + unknowns
       → Tidy first | after | later | never (only if justified)
-        → Direct bounded work OR plan DAG and delegate ready nodes
+        → Delegate inline A/E/R OR plan DAG and delegate ready nodes
           → Verify (incl. independent review for delegated WRITE)
             → Compare planned and returned A/E/R + actual changes
               → Complete | Partial(reason) | Blocked(reason)
@@ -36,7 +37,7 @@ Inspect goal/repo → Retrieve authorized behavior
 
 ## Classification and design
 
-- **Direct:** local low-risk change → main agent, focused check; no unnecessary JSON graph or subagent.
+- **Direct:** one eligible read or routine command → Luna with inline A/E/R. Sol handles coordinator decisions and necessary preflight or recovery.
 - **Graph:** multi-module/dependencies or delegated WRITE → `$graph-protocol` schema-3 READ/RUN/WRITE DAG with explicit owners, named output edges, A/E/R prompts, file ownership and verification argv.
 - **Critical:** auth, security, money, migrations, destruction, consequential correctness → stronger evidence, rollback/recovery and approval where required; not automatically more agents.
 
@@ -52,7 +53,7 @@ Plan A/E/R → scripts/factory init --plan <plan.json> --graph .work/graphs/<tas
     → actual tests/diff → scripts/factory validate --graph <record>
 ```
 
-Dispatch only ready nodes; a dependent node starts after its required inputs are accepted. READ/RUN use `run --return -- <argv>`; WRITE uses `prompt`, `begin` and `end --return`. Prefer native `explorer` for READ, `worker` for WRITE; independent review uses `mimir_reviewer` when installed or separate `default` read-only reviewer. Check different identities and actual observations: a role label does not enforce independence. **Factory leases an entire Git worktree:** serialize nodes in one worktree, even disjoint files. Parallel WRITE requires prepared isolated worktrees, disjoint ownership and deliberate integration. No need for extra agents for trivial tasks. Read `references/LIFECYCLE.md` for examples and critical release boundary.
+Dispatch only ready nodes; a dependent node starts after its required inputs are accepted. READ/RUN use `run --return -- <argv>`; WRITE uses `prompt`, `begin` and `end --return`. Use `mimir_routine` for routine READ, RUN, and WRITE work; independent review uses `mimir_reviewer` when installed or separate `default` read-only reviewer. Check different identities and actual observations: a role label does not enforce independence. **Factory leases an entire Git worktree:** serialize nodes in one worktree, even disjoint files. Parallel WRITE requires prepared isolated worktrees, disjoint ownership and deliberate integration. Read `references/LIFECYCLE.md` for examples and critical release boundary.
 
 ## Selected Bend2 gate
 
