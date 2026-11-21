@@ -5,6 +5,11 @@ description: Plan vertical, end-to-end product changes that cross application/so
 
 # Full-stack data slicing — one decision, one end-to-end checked thread
 
+**Call graphs in handoffs:** When work or a finding depends on how code runs,
+include or reference the relevant source-derived trace in assignments, returns,
+and reviews. Follow **Call Graph Output** in the Mimir coordinator instructions
+(`AGENTS.md` in the release or `.mimir/AGENTS.md` in an installed project).
+
 **Authority:** Defines *delivery slices and handoffs*; it does not redefine product requirements, domain invariants, data metrics, statistical inference or worker graph semantics. Use `$software-design-thinking` for shared engineering principles and conditional application state/effects; `$graph-protocol` continues to own delegated A/E/R. Read [cross-team slicing method](references/CROSS_TEAM_SLICES.md). A [schema-3 work plan example](PLAN_DATA_EXAMPLE.json) shows delegation without confusing it with data lineage.
 
 ## Choose one user-visible decision or action

@@ -5,6 +5,11 @@ description: Evidence-based technical investigation for software design choices 
 
 # Evidence research — subordinate investigation
 
+**Call graphs in handoffs:** When work or a finding depends on how code runs,
+include or reference the relevant source-derived trace in assignments, returns,
+and reviews. Follow **Call Graph Output** in the Mimir coordinator instructions
+(`AGENTS.md` in the release or `.mimir/AGENTS.md` in an installed project).
+
 **Authority:** Research supplies evidence to the software factory; it does not approve product policy or replace the main engineering graph. A requested research report may itself be the deliverable.
 
 ```text

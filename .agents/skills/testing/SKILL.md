@@ -5,6 +5,11 @@ description: Use when verifying behavior changes or consequential behavior-prese
 
 # Testing — claim → check → evidence
 
+**Call graphs in handoffs:** When work or a finding depends on how code runs,
+include or reference the relevant source-derived trace in assignments, returns,
+and reviews. Follow **Call Graph Output** in the Mimir coordinator instructions
+(`AGENTS.md` in the release or `.mimir/AGENTS.md` in an installed project).
+
 **Authority:** `$testing` selects verification and reports observed evidence; it does not approve product requirements, Bend laws, or changes to GUI/domain behavior.
 
 ```text

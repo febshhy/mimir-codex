@@ -5,6 +5,11 @@ description: Verify reliability, data quality, lineage, SLOs, reprocessing, migr
 
 # Data operations — observable quality and safe recovery
 
+**Call graphs in handoffs:** When work or a finding depends on how code runs,
+include or reference the relevant source-derived trace in assignments, returns,
+and reviews. Follow **Call Graph Output** in the Mimir coordinator instructions
+(`AGENTS.md` in the release or `.mimir/AGENTS.md` in an installed project).
+
 **Authority:** Operational checks and response for persistent data and derived products. `$testing` owns verification strategy; `$data-lifecycle` owns lifecycle layout; `$software-design-thinking` owns state/effect semantics; `$requirements` owns permitted impact.
 
 ## Define a real consumer contract
