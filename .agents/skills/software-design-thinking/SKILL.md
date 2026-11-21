@@ -10,6 +10,11 @@ description: >-
 
 # Engineering Foundations — software discipline for full-stack data
 
+**Call graphs in handoffs:** When work or a finding depends on how code runs,
+include or reference the relevant source-derived trace in assignments, returns,
+and reviews. Follow **Call Graph Output** in the Mimir coordinator instructions
+(`AGENTS.md` in the release or `.mimir/AGENTS.md` in an installed project).
+
 **Aim:** make the smallest useful outcome correct, understandable, testable, and operable.
 Use approved requirements as authority; distinguish **Known | Unknown | Assumption | Decision**.
 Do not infer business rules, metric definitions, permission, or model intervention policy.

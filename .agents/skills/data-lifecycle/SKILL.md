@@ -5,6 +5,11 @@ description: Trace, design, implement and operate generation-to-serving data sys
 
 # Data engineering lifecycle — trace data from generation to use
 
+**Call graphs in handoffs:** When work or a finding depends on how code runs,
+include or reference the relevant source-derived trace in assignments, returns,
+and reviews. Follow **Call Graph Output** in the Mimir coordinator instructions
+(`AGENTS.md` in the release or `.mimir/AGENTS.md` in an installed project).
+
 **Authority:** Engineering design across **generation → storage → ingestion → transformation → serving**. The order is a lifecycle inventory, not always the literal order of a pipeline. Use `$software-design-thinking` for applicable contracts, invariants and failure reasoning; reserve advanced state/effect models for genuinely stateful workflows. Use `$data-operations` for runtime, privacy and quality gates. Read [lifecycle concepts](references/REIS_HOUSLEY_METHOD.md) for substantial tasks.
 
 ## Source-to-consumer contract

@@ -9,6 +9,11 @@ description: >-
 
 # Project adoption — source-grounded engineering investigation
 
+**Call graphs in handoffs:** When work or a finding depends on how code runs,
+include or reference the relevant source-derived trace in assignments, returns,
+and reviews. Follow **Call Graph Output** in the Mimir coordinator instructions
+(`AGENTS.md` in the release or `.mimir/AGENTS.md` in an installed project).
+
 **Trigger:** after a verified Mimir installation in an existing repository. This is an agent investigation, not an installation prerequisite, parser coverage gate, or permission to refactor.
 
 ```text

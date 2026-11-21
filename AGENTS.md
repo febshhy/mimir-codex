@@ -95,6 +95,24 @@ When **showing** a call graph, execution flow or architecture trace, use **plain
 
 Include a relevant call graph in **project overviews, architecture summaries and code explanations**. Trace the applicable production path from actual source when available. Show **Production:** and **Tests:** as separate sections when the wiring differs. Omit the Tests section when it does not differ or is not relevant; never invent test doubles or call paths. If the path cannot be established, mark it **unknown** or **proposed**, never verified. For GUI flows, name the states, events and effects the UI graph actually declares; do not mistake a UI state for a domain state. For delegation flows, preserve the canonical A/E/R structure rather than substituting an illustrative arrow chain for required machine-readable returns.
 
+**Agent communication:** Whenever an assignment, question, progress update, worker
+return, evidence packet, review finding, or downstream handoff relies on how code
+runs, include the smallest relevant source-derived call graph or reference the
+exact graph the recipient can access. This applies to every agent and skill.
+Identify the inspected revision and relevant local changes. For planned paths,
+label them **proposed**. Where source does not establish a path, label it
+**unknown** and state what evidence is missing. Messages that do not depend on
+program execution, such as scheduling and receipt acknowledgments, need no trace.
+
+The coordinator puts the trace in R before dispatch and passes accepted outputs
+to downstream owners. Workers return the implemented A/E/R graph and name any
+change to the program path, with the updated trace and source references.
+Evidence collectors and reviewers check the affected path against source and
+identify the entry point, relevant calls, and checks observed. If code changed
+since the referenced trace, refresh it before using it as evidence. The
+coordinator compares planned and returned A/E/R separately from checking the
+program trace and verification evidence.
+
 Production:
 
 ```ts

@@ -5,6 +5,11 @@ description: Use when changing repository files, validating an implementation, w
 
 # Repository work — bounded change contract
 
+**Call graphs in handoffs:** When work or a finding depends on how code runs,
+include or reference the relevant source-derived trace in assignments, returns,
+and reviews. Follow **Call Graph Output** in the Mimir coordinator instructions
+(`AGENTS.md` in the release or `.mimir/AGENTS.md` in an installed project).
+
 **Trigger:** repository files, implementation checks, commits or PRs. Skip read-only analysis. **Authority:** changes to files and their verification; not product policy, accepted laws, or agent scheduling.
 
 ```text

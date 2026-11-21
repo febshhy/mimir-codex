@@ -5,6 +5,11 @@ description: Delegate bounded multi-agent work as typed task graphs using A, E, 
 
 # Graph Protocol — canonical orchestration skill
 
+**Call graphs in handoffs:** When work or a finding depends on how code runs,
+include or reference the relevant source-derived trace in assignments, returns,
+and reviews. Follow **Call Graph Output** in the Mimir coordinator instructions
+(`AGENTS.md` in the release or `.mimir/AGENTS.md` in an installed project).
+
 The original ten-section method in `references/PROTOCOL.md` is authoritative. Read it before designing multi-agent work. `references/V3-CONTRACT.md` is only the mechanical representation; it cannot override the original method.
 
 **Scope of graph authority:** A/edges express task flow and named worker outputs; E covers delegation breakpoints; R covers the worker's subgraph, method, verification and WHY. These are *execution/delegation* requirements, not approved product requirements or domain invariants. Take business behavior from `$requirements` and domain/UI/database contracts from their owning methods (`AGENTS.md`). If a worker discovers an unresolved product policy, report it to the coordinator for the requirements Question Gate; do not settle it by rewriting the task graph. Shared words such as "happy path" and "dependency" do not transfer decision authority. Keep the original A/E/R structure unchanged.
