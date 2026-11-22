@@ -1,5 +1,9 @@
 # Git and Pull-Request Procedure
 
+Follow the **Trunk-based GitOps** contract in the coordinator instructions.
+Luna owns Git and hosting tool calls. Sol accepts the reviewed candidate and
+coordinates authorized delivery.
+
 ## 1. Workspace and branches
 
 Use the integration branch defined in `AGENTS.md` or repository policy. If none is defined, treat `main` as the default integration branch. When remote delivery is in scope and remote access is available, fetch the remote integration branch and confirm its tip before creating a task branch or reusing an assigned checkout. Record the inspected base; if the remote tip cannot be checked, mark it unknown rather than treating the local branch as current.
@@ -115,6 +119,9 @@ cleanup:
   one identified candidate head. Validate its schema-3 graph before accepting
   that candidate. A changed head requires a new candidate review and affected
   checks to be rerun.
+- A repository change is complete only after the accepted head is merged to the
+  remote integration branch and that merge is observed. A local commit or local
+  merge alone is incomplete; report any blocker that prevents remote completion.
 - Pass the accepted reviewed head and candidate validation evidence as named
   inputs to a separate schema-3 delivery record. The delivery flow records the
   head-checked merge (or merge-queue result) before cleanup. Capture the PR URL

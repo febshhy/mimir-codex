@@ -14,6 +14,12 @@ and reviews. Follow **Call Graph Output** in the Mimir coordinator instructions
 
 ## Sol/Luna agent workflow
 
+Follow **Model ownership and scheduling** in the coordinator instructions.
+Luna owns web search and operational tool calls. Sol dispatches ready work and
+resumes on worker results or blockers. Use native notifications or a blocking
+receive when there is no independent work. Keep status polling out of agent
+coordination.
+
 - GPT-6.2 Sol coordinates the task, decides material issues, and independently reviews changes.
 - Delegate substantive routine work to GPT-6 Luna at the first eligible point, including read-only work and small fixes. Use `mimir_routine` with fresh context (`fork_turns: none`) and bounded A/E/R. Luna owns routine inspection, edits, commands, tests, Git, and monitoring through completion.
 - When execution depends on a material decision, delegate fact collection to Luna, resolve the decision as Sol, and return execution to Luna. Record the specific blocker if no substantive Luna assignment is eligible.
