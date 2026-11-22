@@ -4,6 +4,12 @@
 
 The trusted Mimir clone config uses `sandbox_mode = "workspace-write"`, `approval_policy = "on-request"`, and `approvals_reviewer = "auto_review"`. Installation retains model/routing hooks and agent profiles in target projects but strips those three approval keys from the generated project config; this is clone-scoped behavior and is not represented as a verbatim Heimdall installer port. The configured hook checks the current model and spawn target profile/model pair, requires `fork_turns = "none"` for launches, and routes controlled command/edit/write tools to the Luna model. PreToolUse does not document a caller profile field, so the hook cannot claim to identify the caller's agent profile. The reviewer profile disables supported shell, app, plugin, memory, and permission-request capabilities; those flags do not prove a live sandbox. Fixtures do not establish live Codex event-field compatibility or runtime enforcement. Explain project and hook trust during setup. Desktop users choose **Approve for me** in the current chat where available.
 
+## Template use in application repositories
+
+When the user asks to restore or refresh Mimir as a template and guardrail, copy the reviewed upstream `AGENTS.md` and the support files it references, including skills, applicable Codex profiles and routing files, and factory tooling. Preserve application-specific instructions and existing user work. For an application project, omit clone-level approval defaults from Codex configuration. Keep release-only installers, marketing, and starter documentation in the Mimir checkout unless the user requests them in the application.
+
+A template refresh is a repository change. Run the Mimir installer or start application services only when the user requests that separate setup. Verify the restored files and their references without starting services.
+
 ## Documentation ownership boundary
 
 The application `docs/` directory is reserved for **emerging end-user documents**.
@@ -180,6 +186,41 @@ For actual UI construction or consequential review, route behavior/state to `$gu
 <!-- Mimir Bend2: end -->
 
 ## Cost and context
+
+### Model ownership and scheduling
+
+Luna performs all web searches and operational tool calls, including repository
+inspection, edits, tests, Git, GitHub operations, and status checks. Sol uses
+native coordination controls to dispatch bounded assignments, receive results,
+and communicate decisions. If Luna or a required tool is unavailable, report
+the blocker and hold the affected work.
+
+Resume orchestration when a worker returns a result or raises a blocker. Dispatch
+ready independent nodes while workers run. Keep dependent nodes undispatched
+until their required outputs are accepted. When no independent work remains,
+yield to the native scheduler for a completion notification. Where the runtime
+requires an explicit receive, use its blocking notification wait. Avoid
+repeated status queries and sleep loops. For external jobs without notifications,
+assign one Luna owner to wait efficiently and report the result.
+
+### Trunk-based GitOps
+
+Use protected `main` as the integration branch unless repository policy names
+another trunk. Luna fetches and confirms the remote trunk, then creates or
+reuses a short-lived task branch. Keep each commit focused, stage explicit paths,
+review the staged diff, and use a Conventional Commit message.
+
+Luna runs the relevant checks and records the candidate commit and evidence.
+Sol resolves review findings and accepts the reviewed head. With remote
+delivery authorized, Luna pushes the task branch and opens a pull request.
+Repository changes are complete only after the accepted head is merged to the
+remote trunk using the configured merge method or queue and required reviews
+and checks pass; a local commit or local merge alone is incomplete. Report any
+blocker that prevents remote trunk merge. A changed head needs renewed review
+and affected checks. After GitHub reports the merge, Luna fetches trunk,
+verifies the merge commit, and cleans up eligible task branches and worktrees.
+Deployment follows the repository's configured automation and authorization.
+See `.agents/skills/repository-work/references/GIT_AND_PR.md` for the full procedure.
 
 - Delegate substantive routine work to Luna at the first eligible point, including small fixes and read-only investigations. If implementation needs a Sol decision, have Luna gather the facts first, then return execution to Luna once Sol settles the decision.
 - Route routine inspection, drafting, edits, commands, tests, Git, and monitoring to Luna when the scope and success criteria are clear. Give Luna ownership through completion and require it to return observed results. Luna does not recursively delegate.
