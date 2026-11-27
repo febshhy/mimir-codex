@@ -1,4 +1,5 @@
 import importlib.util
+import re
 import sys
 from pathlib import Path
 import unittest
@@ -21,6 +22,18 @@ def decision(event):
 
 
 class ModelRoutingTests(unittest.TestCase):
+    def test_policy_tool_sets_match_configured_pretooluse_matcher(self):
+        config = (ROOT / ".codex/config.toml").read_text()
+        matcher = re.search(r'(?m)^matcher = "([^"]+)"$', config)
+        self.assertIsNotNone(matcher)
+        alternatives = re.fullmatch(r"\^\(([^()]*)\)\$", matcher.group(1))
+        self.assertIsNotNone(alternatives)
+        configured_tools = set(alternatives.group(1).split("|"))
+        self.assertEqual(
+            configured_tools,
+            model_routing.SPAWN_TOOLS | model_routing.ROUTINE_TOOLS,
+        )
+
     def test_sol_can_launch_exact_fresh_routine_and_reviewer_profiles(self):
         for role, model in model_routing.ROLES.items():
             with self.subTest(role=role):

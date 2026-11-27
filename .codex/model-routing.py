@@ -12,7 +12,10 @@ ROLES = {
     "mimir_reviewer": "gpt-6.2-sol",
 }
 SPAWN_TOOLS = {"Agent", "spawn_agent"}
-ROUTINE_TOOLS = {"Bash", "apply_patch", "Edit", "Write"}
+ROUTINE_TOOLS = {
+    "Bash", "Shell", "exec_command", "apply_patch", "Edit", "Write",
+    "write_stdin",
+}
 
 
 def valid_spawn(tool_input, caller_model):
