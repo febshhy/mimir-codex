@@ -98,7 +98,7 @@ class ModelRoutingTests(unittest.TestCase):
     def test_target_config_omits_only_clone_approval_defaults(self):
         rendered = lifecycle.expected_content(ROOT, ".codex/config.toml", False).decode()
         self.assertIn('model = "gpt-6.2-sol"', rendered)
-        self.assertIn('model_reasoning_effort = "high"', rendered)
+        self.assertIn('model_reasoning_effort = "low"', rendered)
         self.assertIn("[agents]", rendered)
         self.assertIn("enabled = true", rendered)
         self.assertIn("max_concurrent_threads_per_session = 4", rendered)

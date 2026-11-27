@@ -1,7 +1,7 @@
 # Mimir project defaults. Codex loads project config only for trusted projects.
 # Explicit user/CLI selections and managed policy may override these defaults.
 model = "gpt-6.2-sol"
-model_reasoning_effort = "high"
+model_reasoning_effort = "low"
 sandbox_mode = "workspace-write"
 approval_policy = "on-request"
 approvals_reviewer = "auto_review"
