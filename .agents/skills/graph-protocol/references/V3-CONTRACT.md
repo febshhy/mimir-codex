@@ -43,3 +43,31 @@ wrap the boundary; A/E/R remains worker-owned between begin and end.
 
 Only the current schema-3 contract is supported. Large structured JSON is passed
 to jq through files, not command-line arguments.
+
+### Opt-in retry evidence
+
+Legacy schema-3 graphs without retry records retain their existing evidence
+paths and validation behavior. To retry a failed node, first ensure its worker
+has stopped, then run:
+
+```sh
+scripts/factory retry --graph .work/graphs/task.json --node N1 --confirm-worker-stopped
+```
+
+This writes a `mimir-factory-retry/1` record with a random 128-bit attempt ID,
+the previous failed state and available receipt/submission hashes, plus a
+canonical record hash. The next `begin` or `run` stores artifacts under
+`NODE.<attempt-id>.<kind>.json`; prior artifact files remain intact. A return is
+compared before a RUN command begins, and every completion checks it before
+recording a receipt. A stale or malformed return therefore cannot produce a
+successful receipt. For a WRITE already begun, reject the return, stop the
+worker, abort the failed running attempt, then authorize a retry. The rejected
+return is retained with that attempt and its hash is bound into the retry
+history; a missing return has no submission to retain.
+
+`validate` checks the retry record hash and every recorded prior failed state,
+receipt and submission hash before validating the active attempt. Unknown or
+malformed retry formats fail closed. A retry record cannot be mixed with
+unbound attempt files or altered without invalidating its hash. This local
+hashing establishes consistency of recorded observations, not an independent
+security attestation.
