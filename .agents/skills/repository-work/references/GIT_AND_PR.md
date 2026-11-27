@@ -127,6 +127,19 @@ cleanup:
   head-checked merge (or merge-queue result) before cleanup. Capture the PR URL
   and resulting merge commit when available. Do not start cleanup while a
   merge is queued or unobserved.
+- Bind the accepted candidate to its exact commit SHA, tree SHA, and inspected
+  base SHA. Record the GitHub PR head SHA, merged state/time, reported merge
+  commit SHA, and observed remote integration branch SHA as separate evidence.
+  Require exact PR-head equality with the accepted commit; a matching tree does
+  not make a different commit equivalent. Verify the accepted base is an
+  ancestor of the candidate. The PR base ref must name the expected integration
+  branch; its base SHA may have advanced since candidate review and is not the
+  reviewed base identity. Recheck the live remote integration branch SHA at
+  validation time, and verify that branch contains the reported merge commit.
+  If the branch moved since observation, refresh the observation and repeat
+  this integration check before acceptance. `scripts/verify_delivery.py` performs these
+  read-only checks from accepted candidate JSON (`commit`, `tree`, `base`), a
+  GitHub PR JSON response, and observed remote-ref JSON (`name`, `sha`).
 - Give each delegated node an A/E/R subgraph with named inputs, outputs, owner,
   and exact verification argv. After it returns, compare the implemented A/E/R
   with the assigned subgraph before accepting its outputs or starting a
