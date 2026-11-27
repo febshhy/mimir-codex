@@ -21,11 +21,31 @@ repoid(){ local common; common=$(git -C "$1" rev-parse --path-format=absolute --
 abs(){ case "$1" in /*) printf '%s\n' "$1";; *) printf '%s/%s\n' "$PWD" "$1";; esac; }
 # GRAPH remains immutable. Mutable observations live alongside it, never inside A/E/R.
 setup_paths(){ GRAPH=$(abs "$GRAPH"); EV="${GRAPH%.json}.evidence"; LOCK="$EV/.lock"; }
-statefile(){ printf '%s/%s.state.json' "$EV" "$1"; }
-receiptfile(){ printf '%s/%s.receipt.json' "$EV" "$1"; }
-returnfile(){ printf '%s/%s.return.json' "$EV" "$1"; }
-manifestfile(){ printf '%s/%s.before.json' "$EV" "$1"; }
-logfile(){ printf '%s/%s.log' "$EV" "$1"; }
+retryfile(){ printf '%s/%s.retry.json' "$EV" "$1"; }
+attempt_id(){ local f id=$1; f=$(retryfile "$id")
+  if [[ -f $f ]]; then
+    local attempt; attempt=$(jq -er --arg id "$id" '
+      select((keys|sort)==["attempt_id","attempts","format","node_id","record_sha256"] and
+        .format=="mimir-factory-retry/1" and .node_id==$id and
+        (.attempt_id|type=="string" and test("^[a-f0-9]{32}$")) and
+        (.attempts|type=="array" and length>0 and all(.[]; type=="object" and
+          (keys|sort)==["attempt_id","receipt_sha256","state_sha256","submission_sha256"] and
+          ((.attempt_id==null) or (.attempt_id|type=="string" and test("^[a-f0-9]{32}$"))) and
+          (.state_sha256|type=="string" and test("^[a-f0-9]{64}$")) and
+          ((.receipt_sha256==null) or (.receipt_sha256|type=="string" and test("^[a-f0-9]{64}$"))) and
+          ((.submission_sha256==null) or (.submission_sha256|type=="string" and test("^[a-f0-9]{64}$"))))) and
+        (([.attempts[].attempt_id|select(.!=null)]|unique|length)==([.attempts[].attempt_id|select(.!=null)]|length))) | .attempt_id' "$f" 2>/dev/null) || fail INTEGRITY "malformed retry record: $f"
+    local actual expected; actual=$(jq -cS 'del(.record_sha256)' "$f" | hash_text); expected=$(jq -r '.record_sha256 // empty' "$f")
+    [[ -n $expected && $actual == "$expected" ]] || fail INTEGRITY "retry record hash mismatch: $f"
+    printf '%s' "$attempt"
+  fi
+}
+artifact(){ local id=$1 suffix=''; local attempt; attempt=$(attempt_id "$id"); [[ -n $attempt ]] && suffix=".$attempt"; printf '%s/%s%s.%s.json' "$EV" "$id" "$suffix" "$2"; }
+statefile(){ artifact "$1" state; }
+receiptfile(){ artifact "$1" receipt; }
+returnfile(){ artifact "$1" return; }
+manifestfile(){ artifact "$1" before; }
+logfile(){ local id=$1 suffix=''; local attempt; attempt=$(attempt_id "$id"); [[ -n $attempt ]] && suffix=".$attempt"; printf '%s/%s%s.log' "$EV" "$id" "$suffix"; }
 # One lease across ALL graphs in this Git worktree. A linked worktree has a
 # distinct --git-dir, so it can run independently. No daemon or shared queue.
 leasefile(){ local gitdir; gitdir=$(git -C "$1" rev-parse --path-format=absolute --git-dir 2>/dev/null) || fail REPOSITORY 'cannot resolve worktree Git directory'; printf '%s/mimir-factory/active' "$gitdir"; }
@@ -118,6 +138,7 @@ compare_return(){
 }
 verify_done(){
   local id=$1 s r ret rh
+  attempt_id "$id" >/dev/null
   s=$(statefile "$id"); r=$(receiptfile "$id"); ret=$(returnfile "$id")
   [[ -f "$s" && -f "$r" && -f "$ret" ]] || fail EVIDENCE "missing artifacts: $id"
   jq -e '.status=="done"' "$s" >/dev/null || fail GATE "predecessor $id not done"
@@ -128,15 +149,64 @@ verify_done(){
     .schema_version==3 and .node_id==$id and .owner==$owner and .status=="done" and
     .status==$state[0].status and .start_order==$state[0].start_order and
     .finish_order==$state[0].finish_order and .worktree==$state[0].worktree and
-    .started_utc==$state[0].started_utc' "$r" >/dev/null || fail EVIDENCE "receipt/state identity mismatch: $id"
+    .started_utc==$state[0].started_utc and
+    ((.attempt_id // null)==($state[0].attempt_id // null))' "$r" >/dev/null || fail EVIDENCE "receipt/state identity mismatch: $id"
   local logsha logp; logsha=$(jq -r '.check.log_sha256 // empty' "$r"); logp=$(logfile "$id")
   if [[ -n $logsha ]]; then [[ -f $logp && $logsha == "$(hash "$logp")" ]] || fail INTEGRITY "log altered: $id"; fi
   jq -e '.errors|length==0' "$r" >/dev/null || fail EVIDENCE "errors reported: $id"
 }
+validate_retry_history(){
+  local id=$1 file entry attempt suffix state receipt submission
+  file=$(retryfile "$id"); [[ -f $file ]] || return 0
+  attempt_id "$id" >/dev/null
+  while IFS= read -r entry; do
+    attempt=$(jq -r '.attempt_id // empty' <<<"$entry"); suffix=''; [[ -n $attempt ]] && suffix=".$attempt"
+    state="$EV/$id$suffix.state.json"; receipt="$EV/$id$suffix.receipt.json"; submission="$EV/$id$suffix.return.json"
+    [[ -f $state && $(hash "$state") == "$(jq -r .state_sha256 <<<"$entry")" ]] || fail INTEGRITY "retry history state mismatch: $id"
+    jq -e --arg attempt "$attempt" '.status=="failed" and ((.attempt_id // null)==(if $attempt=="" then null else $attempt end))' "$state" >/dev/null || fail EVIDENCE "retry history is not the expected failed attempt: $id"
+    local rh sh; rh=$(jq -r '.receipt_sha256 // empty' <<<"$entry"); sh=$(jq -r '.submission_sha256 // empty' <<<"$entry")
+    if [[ -n $rh ]]; then
+      [[ -f $receipt && $(hash "$receipt") == "$rh" ]] || fail INTEGRITY "retry history receipt mismatch: $id"
+      jq -e --arg id "$id" --arg attempt "$attempt" '.status=="failed" and .node_id==$id and ((.attempt_id // null)==(if $attempt=="" then null else $attempt end))' "$receipt" >/dev/null || fail EVIDENCE "retry history receipt identity mismatch: $id"
+      [[ $(jq -r '.receipt_sha256 // empty' "$state") == "$rh" ]] || fail INTEGRITY "retry history state receipt mismatch: $id"
+    fi
+    if [[ -n $sh ]]; then [[ -f $submission && $(hash "$submission") == "$sh" ]] || fail INTEGRITY "retry history submission mismatch: $id"; fi
+    if [[ -n $rh && -n $sh ]]; then [[ $(jq -r '.return_sha256 // empty' "$receipt") == "$sh" ]] || fail INTEGRITY "retry history return binding mismatch: $id"; fi
+  done < <(jq -c '.attempts[]' "$file")
+}
 ready(){
   read_node
-  [[ ! -e $(statefile "$NODE") ]] || fail LIFECYCLE "$NODE already started (retry requires new graph)"
+  attempt_id "$NODE" >/dev/null
+  [[ ! -e $(statefile "$NODE") ]] || fail LIFECYCLE "$NODE already started (confirm stop, then authorize retry)"
   local dep; while IFS= read -r dep; do [[ -n "$dep" ]] || continue; verify_done "$dep"; done < <(jq -r '.depends_on[]' <<<"$TASK")
+}
+prepare_retry(){
+  checkroot; read_node
+  [[ ${CONFIRM_STOPPED:-} == yes ]] || fail USAGE 'retry requires --confirm-worker-stopped'
+  local s r ret lease status prev attempt retry prior_attempt
+  s=$(statefile "$NODE"); r=$(receiptfile "$NODE"); ret=$(returnfile "$NODE"); retry=$(retryfile "$NODE")
+  [[ -f $s ]] || fail LIFECYCLE 'retry requires an existing failed attempt'
+  status=$(jq -r '.status // empty' "$s"); [[ $status == failed ]] || fail LIFECYCLE 'retry requires failed attempt state'
+  [[ $(jq -r '.worktree // empty' "$s") == "$ROOT" ]] || fail LEASE 'attempt belongs to another worktree'
+  lease=$(leasefile "$ROOT"); local owner; owner=$(cat "$lease" 2>/dev/null || :)
+  [[ -z $owner || $owner == "$GRAPH:$NODE" ]] || fail LEASE 'refusing retry while another node owns worktree lease'
+  if [[ -f $retry ]]; then
+    prior_attempt=$(attempt_id "$NODE")
+  else prior_attempt=''; fi
+  attempt=$(tr -d '-' </proc/sys/kernel/random/uuid)
+  prev=$(jq -cn --arg a "$prior_attempt" --arg state "$(hash "$s")" \
+    --arg receipt "$( [[ -f $r ]] && hash "$r" || : )" \
+    --arg submission "$( [[ -f $ret ]] && hash "$ret" || : )" \
+    '{attempt_id:(if $a=="" then null else $a end),state_sha256:$state,receipt_sha256:(if $receipt=="" then null else $receipt end),submission_sha256:(if $submission=="" then null else $submission end)}')
+  if [[ -f $retry ]]; then
+    local body; body=$(jq -cS --arg attempt "$attempt" --argjson previous "$prev" '.attempts += [$previous] | .attempt_id=$attempt | del(.record_sha256)' "$retry")
+    printf '%s\n' "$body" | jq -cS --arg sha "$(printf '%s' "$body" | jq -cS . | hash_text)" '. + {record_sha256:$sha}' | atomic_file "$retry"
+  else
+    local body; body=$(jq -cnS --arg attempt "$attempt" --arg id "$NODE" --argjson previous "$prev" '{format:"mimir-factory-retry/1",node_id:$id,attempt_id:$attempt,attempts:[$previous]}')
+    printf '%s\n' "$body" | jq -cS --arg sha "$(printf '%s' "$body" | jq -cS . | hash_text)" '. + {record_sha256:$sha}' | atomic_file "$retry"
+  fi
+  if [[ $owner == "$GRAPH:$NODE" ]]; then leaselock "$lease"; rm -f "$lease"; leaseunlock; fi
+  echo "RETRY AUTHORIZED: $NODE attempt $attempt"
 }
 prompt_packet(){
   ready
@@ -174,7 +244,7 @@ start_node(){
   (set -o noclobber; printf '%s:%s\n' "$GRAPH" "$NODE" >"$lease") 2>/dev/null || { leaseunlock; unlock; fail LEASE 'worktree already leased by another node or graph; inspect and abort the recorded owner before retrying'; }
   leaseunlock
   order=$(seq)
-  jq -cn --arg id "$NODE" --arg root "$ROOT" --argjson order "$order" --arg time "$(date -u +%FT%TZ)" '{id:$id,status:"starting",worktree:$root,start_order:$order,started_utc:$time}' | atomic_file "$s"
+  jq -cn --arg id "$NODE" --arg root "$ROOT" --argjson order "$order" --arg time "$(date -u +%FT%TZ)" --arg attempt "$(attempt_id "$NODE")" '{id:$id,status:"starting",worktree:$root,start_order:$order,started_utc:$time} + (if $attempt=="" then {} else {attempt_id:$attempt} end)' | atomic_file "$s"
   unlock
   # A worker is not spawned until begin succeeds and reports the boundary packet.
   if ! snapshot "$ROOT" | atomic_file "$(manifestfile "$NODE")"; then fail GIT 'cannot snapshot before task; abort the node'; fi
@@ -189,7 +259,10 @@ complete_node(){
   [[ $(jq -r .status "$s") == running ]] || fail LIFECYCLE 'node not running'
   [[ $(jq -r .worktree "$s") == "$ROOT" && $(cat "$ls" 2>/dev/null || :) == "$GRAPH:$NODE" ]] || fail LEASE 'wrong worktree or lease owner'
   read_node
-  compare_return "$rfile" "$NODE"
+  if ! compare_return "$rfile" "$NODE"; then
+    if [[ -f $rfile && $rfile != "$ret" ]]; then cat -- "$rfile" | atomic_file "$ret"; fi
+    fail RETURN 'worker return rejected; stop worker and abort this attempt before retrying'
+  fi
   before=$(manifestfile "$NODE"); after=$(mktemp); changed=$(mktemp)
   snapshot "$ROOT" >"$after" || { rm -f "$after" "$changed"; fail GIT 'snapshot failed'; }
   changes "$before" "$after" >"$changed" || { rm -f "$after" "$changed"; fail GIT 'HEAD or root changed'; }
@@ -215,13 +288,13 @@ complete_node(){
   lock
   [[ $(jq -r .status "$s") == running ]] || { unlock; fail LIFECYCLE 'concurrent lifecycle transition'; }
   endorder=$(seq); startorder=$(jq -r .start_order "$s")
-  jq -cn --arg id "$NODE" --arg owner "$(jq -r .owner <<<"$TASK")" --arg root "$ROOT" \
+  jq -cn --arg id "$NODE" --arg owner "$(jq -r .owner <<<"$TASK")" --arg root "$ROOT" --arg attempt "$(attempt_id "$NODE")" \
     --arg status "$status" --slurpfile before "$before" --slurpfile after "$after" \
     --slurpfile changed "$changed" --argjson errors "$errors" --argjson check "$checked" \
     --argjson start "$startorder" --argjson finish "$endorder" \
     --arg started "$(jq -r .started_utc "$s")" --arg finished "$(date -u +%FT%TZ)" \
     --arg rethash "$(hash "$ret")" --arg note "$note" \
-    '{schema_version:3,node_id:$id,owner:$owner,worktree:$root,status:$status,before:$before[0],after:$after[0],changed:$changed[0],errors:$errors,start_order:$start,finish_order:$finish,started_utc:$started,finished_utc:$finished,check:$check,return_sha256:$rethash,review_note:$note}' | atomic_file "$r"
+    '{schema_version:3,node_id:$id,owner:$owner,worktree:$root,status:$status,before:$before[0],after:$after[0],changed:$changed[0],errors:$errors,start_order:$start,finish_order:$finish,started_utc:$started,finished_utc:$finished,check:$check,return_sha256:$rethash,review_note:$note} + (if $attempt=="" then {} else {attempt_id:$attempt} end)' | atomic_file "$r"
   jq -c --arg rh "$(hash "$r")" --arg status "$status" --argjson ord "$endorder" --argjson errs "$errors" '.status=$status | .finish_order=$ord | .errors=$errs | .receipt_sha256=$rh' "$s" | atomic_file "$s"
   leaselock "$ls"
   [[ $(cat "$ls" 2>/dev/null || :) == "$GRAPH:$NODE" ]] || { leaseunlock; unlock; fail LEASE 'lease owner changed during completion'; }
@@ -293,7 +366,7 @@ case "$COMMAND" in
     jq -cS --arg id "$id" --arg sha "$digest" '. + {repository_id:$id,plan_sha256:$sha}' "$PLAN" | atomic_file "$GRAPH"
     printf '0\n' | atomic_file "$EV/sequence"
     unlock; echo "INITIALIZED: $GRAPH";;
-  ready|prompt|begin|end|run|compare|abort|recover)
+  ready|prompt|begin|end|run|compare|abort|recover|retry)
     [[ $NODE =~ ^N[1-9][0-9]*$ ]] || fail USAGE 'valid --node N... required'
     checkgraph
     case "$COMMAND" in
@@ -307,6 +380,7 @@ case "$COMMAND" in
         checkroot; read_node
         RUN_ARGV=$(printf '%s\0' "${ARGV[@]}" | jq -Rs 'split("\u0000")[:-1]')
         jq -e --argjson argv "$RUN_ARGV" 'any(.delegation.R.verification[]; .==$argv)' <<<"$TASK" >/dev/null || fail CONTRACT 'run command not declared in R.verification'
+        compare_return "$RETURN" "$NODE"
         [[ "$TIMEOUT" =~ ^[1-9][0-9]*$ ]] || fail USAGE 'timeout must be positive integer seconds'
         command -v timeout >/dev/null || fail DEPENDENCY 'GNU timeout required for command execution'
         start_node EXEC
@@ -334,11 +408,14 @@ case "$COMMAND" in
         if [[ -z $owner ]]; then leaseunlock; unlock; echo "RECOVERED: $NODE (lease already absent)";
         elif [[ $owner == "$GRAPH:$NODE" ]]; then rm -f "$lease"; leaseunlock; unlock; echo "RECOVERED: $NODE";
         else leaseunlock; unlock; fail LEASE 'refusing to remove a lease owned by another graph or node'; fi;;
+      retry) prepare_retry;;
     esac;;
   validate)
     checkgraph
     local_bad=0
     while IFS= read -r id; do
+      attempt_id "$id" >/dev/null
+      validate_retry_history "$id"
       verify_done "$id"
       s=$(statefile "$id"); r=$(receiptfile "$id")
       [[ $(jq -r .start_order "$r") -lt $(jq -r .finish_order "$r") ]] || fail ORDER "invalid event sequence for $id"
@@ -362,6 +439,7 @@ case "$COMMAND" in
     checkgraph
     states=$(mktemp)
     while IFS= read -r id; do
+      attempt_id "$id" >/dev/null
       if [[ -f $(statefile "$id") ]]; then
         jq -c '{id,status,start_order,finish_order,errors}' "$(statefile "$id")" >>"$states"
       else jq -cn --arg id "$id" '{id:$id,status:"pending"}' >>"$states"; fi
