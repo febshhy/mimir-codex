@@ -29,6 +29,9 @@ logfile(){ printf '%s/%s.log' "$EV" "$1"; }
 # One lease across ALL graphs in this Git worktree. A linked worktree has a
 # distinct --git-dir, so it can run independently. No daemon or shared queue.
 leasefile(){ local gitdir; gitdir=$(git -C "$1" rev-parse --path-format=absolute --git-dir 2>/dev/null) || fail REPOSITORY 'cannot resolve worktree Git directory'; printf '%s/mimir-factory/active' "$gitdir"; }
+# Lease mutations across graphs serialize on a stable lock beside the shared marker.
+leaselock(){ local lease=$1; exec 8>"$(dirname -- "$lease")/.lock"; flock -x 8; }
+leaseunlock(){ flock -u 8; exec 8>&-; }
 # The shared lock protects only state/sequence/lease transitions; never Git scanning or execution.
 lock(){ exec 9>"$LOCK"; flock -x 9; }
 unlock(){ flock -u 9; exec 9>&-; }
@@ -167,7 +170,9 @@ start_node(){
   [[ ! -e "$s" ]] || { unlock; fail LIFECYCLE 'node already started'; }
   # Recheck predecessor status after the readiness preflight.
   local dep; while IFS= read -r dep; do [[ -z $dep || $(jq -r .status "$(statefile "$dep")") == done ]] || { unlock; fail GATE "predecessor not done: $dep"; }; done < <(jq -r '.depends_on[]' <<<"$TASK")
-  (set -o noclobber; printf '%s:%s\n' "$GRAPH" "$NODE" >"$lease") 2>/dev/null || { unlock; fail LEASE 'worktree already leased by another node or graph; inspect and abort the recorded owner before retrying'; }
+  leaselock "$lease"
+  (set -o noclobber; printf '%s:%s\n' "$GRAPH" "$NODE" >"$lease") 2>/dev/null || { leaseunlock; unlock; fail LEASE 'worktree already leased by another node or graph; inspect and abort the recorded owner before retrying'; }
+  leaseunlock
   order=$(seq)
   jq -cn --arg id "$NODE" --arg root "$ROOT" --argjson order "$order" --arg time "$(date -u +%FT%TZ)" '{id:$id,status:"starting",worktree:$root,start_order:$order,started_utc:$time}' | atomic_file "$s"
   unlock
@@ -218,7 +223,9 @@ complete_node(){
     --arg rethash "$(hash "$ret")" --arg note "$note" \
     '{schema_version:3,node_id:$id,owner:$owner,worktree:$root,status:$status,before:$before[0],after:$after[0],changed:$changed[0],errors:$errors,start_order:$start,finish_order:$finish,started_utc:$started,finished_utc:$finished,check:$check,return_sha256:$rethash,review_note:$note}' | atomic_file "$r"
   jq -c --arg rh "$(hash "$r")" --arg status "$status" --argjson ord "$endorder" --argjson errs "$errors" '.status=$status | .finish_order=$ord | .errors=$errs | .receipt_sha256=$rh' "$s" | atomic_file "$s"
-  rm -f "$ls"; unlock
+  leaselock "$ls"
+  [[ $(cat "$ls" 2>/dev/null || :) == "$GRAPH:$NODE" ]] || { leaseunlock; unlock; fail LEASE 'lease owner changed during completion'; }
+  rm -f "$ls"; leaseunlock; unlock
   rm -f "$after" "$changed"
   [[ "$status" == done ]] || fail EXECUTION "$NODE failed: $error_kind"
   echo "RECORDED: $NODE"
@@ -257,16 +264,16 @@ tool_capabilities(){
        yq: (capability($yq) + {variant: $yq_variant})}}'
 }
 # Parses flags common to each verb; command argv after -- is preserved exactly.
-COMMAND=${1:-}; [[ -n "$COMMAND" ]] || fail USAGE 'factory <tools|init|prompt|ready|compare|begin|end|run|validate|status|abort|log|proof|version>'
+COMMAND=${1:-}; [[ -n "$COMMAND" ]] || fail USAGE 'factory <tools|init|prompt|ready|compare|begin|end|run|validate|status|abort|recover|log|proof|version>'
 shift || :
-GRAPH='.work/graphs/task.json'; ROOT="$PWD"; PLAN=''; NODE=''; RETURN=''; REVIEW=''; REASON=''; TIMEOUT='600'; SUITE=''; ARGV=()
+GRAPH='.work/graphs/task.json'; ROOT="$PWD"; PLAN=''; NODE=''; RETURN=''; REVIEW=''; REASON=''; TIMEOUT='600'; SUITE=''; CONFIRM_STOPPED=''; ARGV=()
 if [[ $COMMAND == log && $# -gt 0 ]]; then SUITE=$1; shift; fi
 while (($#)); do
   case "$1" in
     --graph) GRAPH=$2; shift 2;; --root) ROOT=$2; shift 2;; --plan) PLAN=$2; shift 2;;
     --node) NODE=$2; shift 2;; --return) RETURN=$2; shift 2;;
     --review-note) REVIEW=$2; shift 2;; --reason) REASON=$2; shift 2;;
-    --timeout) TIMEOUT=$2; shift 2;; --) shift; ARGV=("$@"); break;;
+    --timeout) TIMEOUT=$2; shift 2;; --confirm-worker-stopped) CONFIRM_STOPPED=yes; shift;; --) shift; ARGV=("$@"); break;;
     *) fail USAGE "unknown flag $1";;
   esac
 done
@@ -286,7 +293,7 @@ case "$COMMAND" in
     jq -cS --arg id "$id" --arg sha "$digest" '. + {repository_id:$id,plan_sha256:$sha}' "$PLAN" | atomic_file "$GRAPH"
     printf '0\n' | atomic_file "$EV/sequence"
     unlock; echo "INITIALIZED: $GRAPH";;
-  ready|prompt|begin|end|run|compare|abort)
+  ready|prompt|begin|end|run|compare|abort|recover)
     [[ $NODE =~ ^N[1-9][0-9]*$ ]] || fail USAGE 'valid --node N... required'
     checkgraph
     case "$COMMAND" in
@@ -316,8 +323,17 @@ case "$COMMAND" in
         [[ $(jq -r .status "$s") != failed ]] || fail LIFECYCLE 'node already failed'
         lock; e=$(seq)
         jq -c --arg r "$REASON" --argjson n "$e" '.status="failed"|.finish_order=$n|.errors=[{code:"aborted",message:$r}]' "$s" | atomic_file "$s"
-        lease=$(leasefile "$(jq -r .worktree "$s")"); [[ $(cat "$lease" 2>/dev/null || :) == "$GRAPH:$NODE" ]] && rm -f "$lease"
+        lease=$(leasefile "$(jq -r .worktree "$s")"); leaselock "$lease"; [[ $(cat "$lease" 2>/dev/null || :) == "$GRAPH:$NODE" ]] && rm -f "$lease"; leaseunlock
         unlock; echo "ABORTED: $NODE";;
+      recover)
+        checkroot; [[ ${CONFIRM_STOPPED:-} == yes ]] || fail USAGE 'recover requires --confirm-worker-stopped';
+        s=$(statefile "$NODE"); [[ -f "$s" ]] || fail LIFECYCLE 'node state missing';
+        [[ $(jq -r .worktree "$s") == "$ROOT" ]] || fail LEASE 'node belongs to another worktree';
+        status=$(jq -r .status "$s"); [[ $status == failed || $status == done ]] || fail LIFECYCLE 'recovery requires terminal node state';
+        lock; lease=$(leasefile "$ROOT"); leaselock "$lease"; owner=$(cat "$lease" 2>/dev/null || :);
+        if [[ -z $owner ]]; then leaseunlock; unlock; echo "RECOVERED: $NODE (lease already absent)";
+        elif [[ $owner == "$GRAPH:$NODE" ]]; then rm -f "$lease"; leaseunlock; unlock; echo "RECOVERED: $NODE";
+        else leaseunlock; unlock; fail LEASE 'refusing to remove a lease owned by another graph or node'; fi;;
     esac;;
   validate)
     checkgraph
