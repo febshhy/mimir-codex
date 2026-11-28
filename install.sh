@@ -124,7 +124,7 @@ verify_files(){
   while IFS=$'\t' read -r rel sha; do
     [[ -n $rel ]] || continue
     safe_path "$rel"
-    case "$rel" in .mimir/AGENTS.md|.mimir/install.sh|.agents/skills/*|.codex/config.toml|.codex/model-routing.py|.codex/agents/*|scripts/*|proofs/*) ;; *) fail "Unexpected managed path: $rel";; esac
+    case "$rel" in .mimir/AGENTS.md|.mimir/install.sh|.agents/skills/*|.codex/config.toml|.codex/model-routing.py|.codex/model-routing.sh|.codex/agents/*|scripts/*|proofs/*) ;; *) fail "Unexpected managed path: $rel";; esac
     dest="$TARGET/$rel"
     [[ -f "$dest" && ! -L "$dest" ]] || fail "Missing managed file: $rel"
     found=$(sha256sum -- "$dest"); found=${found:0:64}
@@ -293,7 +293,7 @@ fi
 # Install a project model default as a managed file. Never overwrite an existing
 # unrelated .codex/config.toml: the standard conflict gate will fail safely.
 [[ -f "$SOURCE/.codex/config.toml" && ! -L "$SOURCE/.codex/config.toml" ]] || fail 'Release has no Codex model config'
-RELS+=(.codex/config.toml .codex/model-routing.py .mimir/AGENTS.md .mimir/install.sh)
+RELS+=(.codex/config.toml .codex/model-routing.py .codex/model-routing.sh .mimir/AGENTS.md .mimir/install.sh)
 ((${#RELS[@]} > 2)) || fail 'Release contains no installable files'
 safe_path .mimir/manifest.json
 safe_path "$ACTIVE_AGENTS"
@@ -393,7 +393,7 @@ if ((BEND2)); then
 fi
 # Approval behavior belongs to the trusted Mimir clone. Keep these defaults in
 # its config, while omitting them from the generated application project config.
-awk '!/^(sandbox_mode|approval_policy|approvals_reviewer)[[:space:]]*=/' \
+awk '!/^(sandbox_mode|approval_policy|approvals_reviewer|model_auto_compact_token_limit)[[:space:]]*=/' \
   "$SOURCE/.codex/config.toml" > "$STAGE/project-config.toml" || fail 'Failed to render project Codex config.'
 mkdir -p -- "$BACKUP"
 declare -a WRITTEN=()
@@ -503,4 +503,4 @@ for rel in "${DELETED[@]}"; do
 done
 note "Installed ${#RELS[@]} files in $TARGET (instructions: $ACTIVE_AGENTS; Bend2: $([[ $BEND2 -eq 1 ]] && echo enabled || echo disabled))"
 note "Verify: cd '$TARGET' && bash .mimir/install.sh --verify"
-note "Start:  cd '$TARGET' && codex"
+note "Start a fresh Codex session: cd '$TARGET' && codex"

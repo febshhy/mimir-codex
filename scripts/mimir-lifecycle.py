@@ -22,7 +22,7 @@ import uuid
 
 SCHEMA = 1
 MANAGED_DIRS = ('.agents/skills', '.codex/agents', 'scripts')
-EXTRA = ('.codex/config.toml', '.codex/model-routing.py', '.mimir/AGENTS.md', '.mimir/install.sh')
+EXTRA = ('.codex/config.toml', '.codex/model-routing.py', '.codex/model-routing.sh', '.mimir/AGENTS.md', '.mimir/install.sh')
 STATE_KINDS = {'prepared', 'applying', 'incomplete', 'installed_verified', 'complete', 'reverting', 'reverted'}
 
 class LifecycleError(Exception):
@@ -119,7 +119,7 @@ def release_inventory(source, bend2):
         origin = source / directory
         if not origin.is_dir() or origin.is_symlink(): reject('missing/unsafe release directory: ' + directory)
         for base, dirs, names in os.walk(origin, followlinks=False):
-            dirs[:] = [d for d in dirs if d != '__pycache__']
+            dirs[:] = [d for d in dirs if d != '__pycache__' and not (Path(base) / d).relative_to(source).as_posix().startswith('.work/')]
             dirs.sort(); names.sort()
             if any((Path(base) / d).is_symlink() for d in dirs): reject('symlink directory in release')
             for name in names:
@@ -159,7 +159,7 @@ def expected_content(source, rel, bend2):
     if rel == '.mimir/AGENTS.md': return render_agents(source, bend2)
     if rel == '.codex/config.toml':
         config = (source / rel).read_text(encoding='utf-8')
-        omitted = {'sandbox_mode', 'approval_policy', 'approvals_reviewer'}
+        omitted = {'sandbox_mode', 'approval_policy', 'approvals_reviewer', 'model_auto_compact_token_limit'}
         lines = [line for line in config.splitlines(keepends=True)
                  if not any(re.match(r'^' + re.escape(key) + r'\s*=', line) for key in omitted)]
         return ''.join(lines).encode('utf-8')
