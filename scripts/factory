@@ -151,9 +151,36 @@ verify_done(){
     .finish_order==$state[0].finish_order and .worktree==$state[0].worktree and
     .started_utc==$state[0].started_utc and
     ((.attempt_id // null)==($state[0].attempt_id // null))' "$r" >/dev/null || fail EVIDENCE "receipt/state identity mismatch: $id"
+  if [[ $(jq -r '.gate' <<<"$task") == review ]]; then
+    local candidate source receipt_path
+    for source in $(jq -r '.verifies[]' <<<"$task"); do
+      receipt_path=$(receiptfile "$source")
+      candidate=$(jq -r '.candidate_sha256 // empty' "$receipt_path")
+      [[ -n $candidate && $candidate == "$(jq -r --arg source "$source" '.reviewed_candidates[$source] // empty' "$r")" ]] || fail EVIDENCE "review is not bound to verified candidate: $source"
+      [[ $candidate == "$(jq -cS '.before' "$r" | hash_text)" ]] || fail EVIDENCE "reviewed worktree differs from candidate: $source"
+      [[ $candidate == "$(jq -cS '.after' "$r" | hash_text)" ]] || fail EVIDENCE "reviewed worktree changed during review: $source"
+    done
+  fi
   local logsha logp; logsha=$(jq -r '.check.log_sha256 // empty' "$r"); logp=$(logfile "$id")
   if [[ -n $logsha ]]; then [[ -f $logp && $logsha == "$(hash "$logp")" ]] || fail INTEGRITY "log altered: $id"; fi
   jq -e '.errors|length==0' "$r" >/dev/null || fail EVIDENCE "errors reported: $id"
+}
+verify_review_candidate(){
+  local task=$1 current source receipt candidate
+  [[ $(jq -r '.gate' <<<"$task") == review ]] || return 0
+  current=$(mktemp)
+  snapshot "$ROOT" >"$current" || { rm -f "$current"; fail GIT 'cannot snapshot review candidate'; }
+  local mismatch=''
+  for source in $(jq -r '.verifies[]' <<<"$task"); do
+    receipt=$(receiptfile "$source")
+    candidate=$(jq -r '.candidate_sha256 // empty' "$receipt")
+    if [[ -z $candidate || $candidate != "$(jq -cS . "$current" | hash_text)" ]]; then mismatch=$source; break; fi
+  done
+  rm -f "$current"
+  if [[ -n $mismatch ]]; then
+    printf 'ERROR [EVIDENCE] candidate_mismatch: review candidate changed before command: %s\n' "$mismatch" >&2
+    return 1
+  fi
 }
 validate_retry_history(){
   local id=$1 file entry attempt suffix state receipt submission
@@ -270,6 +297,16 @@ complete_node(){
     [[ $(jq 'length' "$changed") -gt 0 ]] || error_kind='no_change'
     valid_scope "$changed" "$NODE" >/dev/null || error_kind='out_of_scope'
   else [[ $(jq 'length' "$changed") == 0 ]] || error_kind='read_mutation'; fi
+  local candidate_sha reviewed='{}' source source_receipt candidate
+  candidate_sha=$(jq -cS . "$after" | hash_text)
+  if [[ $(jq -r '.gate' <<<"$TASK") == review ]]; then
+    for source in $(jq -r '.verifies[]' <<<"$TASK"); do
+      source_receipt=$(receiptfile "$source")
+      candidate=$(jq -r '.candidate_sha256 // empty' "$source_receipt")
+      [[ -n $candidate && $candidate == "$(jq -cS . "$before" | hash_text)" && $candidate == "$(jq -cS . "$after" | hash_text)" ]] || error_kind='candidate_mismatch'
+      reviewed=$(jq -cn --argjson current "$reviewed" --arg source "$source" --arg candidate "$candidate" '$current + {($source):$candidate}')
+    done
+  fi
   if [[ $mode != WRITE ]]; then
     [[ -n "$note" || $(jq -r '.gate' <<<"$TASK") == none ]] || error_kind='missing_review_note'
   fi
@@ -278,7 +315,7 @@ complete_node(){
     logfile_path=$(logfile "$NODE"); [[ -f "$logfile_path" ]] || fail EVIDENCE 'command log missing'
     logsha=$(hash "$logfile_path");
     checked=$(jq -cn --argjson argv "$RUN_ARGV" --argjson code "$RUN_EXIT" --arg log "${logfile_path##*/}" --arg sha "$logsha" '{argv:$argv,exit_code:$code,log:$log,log_sha256:$sha}')
-    [[ $RUN_EXIT -eq 0 ]] || error_kind='command_failed'
+    [[ $RUN_EXIT -eq 0 || $error_kind == candidate_mismatch ]] || error_kind='command_failed'
   fi
   # Canonicalize the worker return before deriving its receipt hash.
   canonical "$rfile" | atomic_file "$ret"
@@ -294,7 +331,8 @@ complete_node(){
     --argjson start "$startorder" --argjson finish "$endorder" \
     --arg started "$(jq -r .started_utc "$s")" --arg finished "$(date -u +%FT%TZ)" \
     --arg rethash "$(hash "$ret")" --arg note "$note" \
-    '{schema_version:3,node_id:$id,owner:$owner,worktree:$root,status:$status,before:$before[0],after:$after[0],changed:$changed[0],errors:$errors,start_order:$start,finish_order:$finish,started_utc:$started,finished_utc:$finished,check:$check,return_sha256:$rethash,review_note:$note} + (if $attempt=="" then {} else {attempt_id:$attempt} end)' | atomic_file "$r"
+    --arg candidate "$candidate_sha" --argjson reviewed "$reviewed" \
+    '{schema_version:3,node_id:$id,owner:$owner,worktree:$root,status:$status,before:$before[0],after:$after[0],changed:$changed[0],errors:$errors,start_order:$start,finish_order:$finish,started_utc:$started,finished_utc:$finished,check:$check,return_sha256:$rethash,review_note:$note,candidate_sha256:$candidate,reviewed_candidates:$reviewed} + (if $attempt=="" then {} else {attempt_id:$attempt} end)' | atomic_file "$r"
   jq -c --arg rh "$(hash "$r")" --arg status "$status" --argjson ord "$endorder" --argjson errs "$errors" '.status=$status | .finish_order=$ord | .errors=$errs | .receipt_sha256=$rh' "$s" | atomic_file "$s"
   leaselock "$ls"
   [[ $(cat "$ls" 2>/dev/null || :) == "$GRAPH:$NODE" ]] || { leaseunlock; unlock; fail LEASE 'lease owner changed during completion'; }
@@ -385,6 +423,13 @@ case "$COMMAND" in
         command -v timeout >/dev/null || fail DEPENDENCY 'GNU timeout required for command execution'
         start_node EXEC
         logpath=$(logfile "$NODE")
+        if ! verify_review_candidate "$TASK"; then
+          intended_argv=$RUN_ARGV
+          RUN_ARGV='[]'
+          RUN_EXIT=1
+          printf 'candidate_mismatch; command not run; intended argv: %s\n' "$intended_argv" >"$logpath"
+          complete_node EXEC "$RETURN" "$REVIEW"
+        fi
         set +e
         (cd "$ROOT" && timeout --kill-after=2s "${TIMEOUT}s" "${ARGV[@]}") >"$logpath" 2>&1
         RUN_EXIT=$?

@@ -5,6 +5,8 @@ description: Use for an important architectural decision that is difficult to re
 
 # ADR — consequential, hard-to-reverse choice
 
+Optional task notes under ignored `.work/` may hold concrete evidence that helps explain an architectural decision. Keep the decision record in its governed location; notes never replace required factory records or evidence.
+
 **Trigger:** an important architectural one-way door. Skip routine features, fixes, names, and reversible refactors.
 
 ```text

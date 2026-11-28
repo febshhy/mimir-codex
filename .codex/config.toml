@@ -2,6 +2,7 @@
 # Explicit user/CLI selections and managed policy may override these defaults.
 model = "gpt-6.2-sol"
 model_reasoning_effort = "low"
+model_auto_compact_token_limit = 64000
 sandbox_mode = "workspace-write"
 approval_policy = "on-request"
 approvals_reviewer = "auto_review"
@@ -18,5 +19,5 @@ matcher = "^(Agent|spawn_agent|Bash|Shell|exec_command|apply_patch|Edit|Write|wr
 
 [[hooks.PreToolUse.hooks]]
 type = "command"
-command = 'python3 "$(git rev-parse --show-toplevel)/.codex/model-routing.py"'
+command = 'bash "$(git rev-parse --show-toplevel)/.codex/model-routing.sh"'
 statusMessage = "Checking Mimir role, model, and tool routing"

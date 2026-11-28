@@ -20,6 +20,8 @@ Claim (approved requirement | invariant | defect | relevant contract)
         → Report supported scope, gaps, command, exit result, log
 ```
 
+Optional task notes under ignored `.work/` may preserve concrete evidence or reduce repeated inspection. They never replace required schema-3 plans, receipts, command logs, or observations. Preserve existing tests and evidence; do not create a separate task note just to record test planning.
+
 ## Selection contract
 
 Prefer one primary check per claim at a stable boundary; do not duplicate a claim at the same boundary or chase coverage numbers.

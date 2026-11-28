@@ -41,6 +41,19 @@ safely infer that a worker is dead. Short graph-local metadata locks protect
 node state transitions. Worker execution is not scheduled by this CLI. Observations
 wrap the boundary; A/E/R remains worker-owned between begin and end.
 
+Successful WRITE receipts include `candidate_sha256`, the canonical hash of
+the observed post-write worktree snapshot. A node with `gate: review` binds
+each node in `verifies` to that hash in `reviewed_candidates`. Validation
+requires the reviewer's pre-command snapshot to match the verified candidate;
+the review command fails before execution when its current snapshot differs,
+and completion requires both the pre-command and post-command snapshots to
+match, catching changes during review. The review receipt and its hash bind
+that candidate identity for downstream gates. Historical graphs
+and receipts remain available for status and inspection, but receipts created
+before candidate binding cannot satisfy current acceptance. Re-run the required
+write and independent review to create fresh evidence; do not grandfather old
+graphs into acceptance.
+
 Only the current schema-3 contract is supported. Large structured JSON is passed
 to jq through files, not command-line arguments.
 
